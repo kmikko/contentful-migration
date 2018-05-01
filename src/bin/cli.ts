@@ -97,7 +97,30 @@ async function runSingle (argv) {
     environmentId
   }
 
-  execMigration(migrationFunction, config)
+  const client = createClient(config)
+  const history = await client.fetcher.getMigrationHistory()
+  const migrationName = path.basename(migrationFunction.filePath)
+
+  let thisMigrationHistory = history.filter(m => m.migrationName === migrationName && m.completed).pop()
+  if (thisMigrationHistory) {
+    console.log(chalk`{gray Migration previously completed at ${new Date(thisMigrationHistory.completed).toString()}}`)
+    if (!argv.force) {
+      return
+    }
+    console.log(chalk`  {gray Re-running migration anyways due to "--force" parameter}`)
+  } else {
+    thisMigrationHistory = history.filter(m => m.migrationName === migrationName).pop()
+    if (thisMigrationHistory) {
+      console.log(chalk`⚠️  {bold.yellow Migration failed before completion at ${new Date(thisMigrationHistory.started).toString()}}`)
+      if (!argv.force) {
+        console.log(chalk`  {bold.yellow Please manually inspect the data model for errors and then re-run using "--force"}`)
+        return
+      }
+      console.log(chalk`  {gray Re-running migration anyways due to "--force" parameter}`)
+    }
+  }
+
+  execMigration(migrationFunction, config, client)
 }
 
 async function runBatch (argv) {
@@ -126,22 +149,38 @@ async function runBatch (argv) {
   files.sort()
 
   migrationFunctions.push(...files.map(f => loadMigrationFunction(path.resolve(process.cwd(), f))))
+  
+  const client = createClient(config)
+  const history = await client.fetcher.getMigrationHistory()
 
   if (migrationFunctions.length === 0) {
     console.log(chalk`{bold.yellow No migrations found in ${glob}}`)
   } else {
-    console.log(chalk`{bold.cyan ${migrationFunctions.length.toString()} migrations to be performed:}`)
-    console.log(`${migrationFunctions.map((f, i) => (`  ${i + 1}: ${path.basename(f.filePath)}`)).join('\n')}`)
     for (let i = 0; i < migrationFunctions.length; i++) {
       const migration = migrationFunctions[i]
-      console.log(chalk`{bold.cyan Migration ${(i + 1).toString()} of ${migrationFunctions.length.toString()}: ${path.basename(migration.filePath)}}`)
-      await execMigration(migrationFunctions[i], config)
+
+      const migrationName = path.basename(migration.filePath)
+      let thisMigrationHistory = history.filter(m => m.migrationName === migrationName && m.completed).pop()
+      if (thisMigrationHistory) {
+        console.log(chalk`{gray Migration ${(i + 1).toString()}: ${migrationName}\n  previously completed at ${new Date(thisMigrationHistory.completed).toString()}}`)
+      } else {
+        thisMigrationHistory = history.filter(m => m.migrationName === migrationName).pop()
+        if (thisMigrationHistory) {
+          console.log(chalk`⚠️  {bold.yellow Migration ${(i + 1).toString()}: ${migrationName}\n  failed before completion at ${new Date(thisMigrationHistory.started).toString()}}`)
+          if (!argv.force) {
+            console.log(chalk`  {bold.yellow   Please manually inspect the data model for errors and then re-run using "--force"}`)
+            return
+          }
+          console.log(chalk`  {bold.yellow   Re-running migration anyways due to "--force" parameter}`)
+        }
+        console.log(chalk`{bold.cyan Migration ${(i + 1).toString()}: ${migrationName}}`)
+        await execMigration(migration, config, client)
+      }
     }
   }
 }
 
-async function execMigration (migrationFunction, config) {
-
+function createClient(config) {
   const clientConfig = Object.assign({
     application: `contentful.migration-cli/${version}`
   }, config)
@@ -154,33 +193,17 @@ async function execMigration (migrationFunction, config) {
     return client.rawRequest(cfg)
   }
 
+  const fetcher = new Fetcher(makeRequest)
+  return { client, makeRequest, fetcher }
+}
+
+async function execMigration (migrationFunction, config, { client, makeRequest, fetcher }) {
+
   const migrationName = path.basename(migrationFunction.filePath)
   const errorsFile = path.join(
     process.cwd(),
     `errors-${migrationName}-${Date.now()}.log`
   )
-
-  const fetcher = new Fetcher(makeRequest)
-
-  const history = await fetcher.getMigrationHistory()
-  let thisMigrationHistory = history.filter(m => m.migrationName === migrationName && m.completed).pop()
-  if (thisMigrationHistory) {
-    console.log(chalk`{gray Migration previously completed at ${new Date(thisMigrationHistory.completed).toString()}}`)
-    if (!argv.force) {
-      return
-    }
-    console.log(chalk`  {gray Re-running migration anyways due to "--force" parameter}`)
-  } else {
-    thisMigrationHistory = history.filter(m => m.migrationName === migrationName).pop()
-    if (thisMigrationHistory) {
-      console.log(chalk`⚠️  {bold.yellow Migration failed before completion at ${new Date(thisMigrationHistory.started).toString()}}`)
-      if (!argv.force) {
-        console.log(chalk`  {bold.yellow Please manually inspect the data model for errors and then re-run using "--force"}`)
-        return
-      }
-      console.log(chalk`  {gray Re-running migration anyways due to "--force" parameter}`)
-    }
-  }
 
   const migrationParser = createMigrationParser(fetcher)
 
@@ -270,6 +293,7 @@ async function execMigration (migrationFunction, config) {
   const space = await client.getSpace(config.spaceId)
   const environment = await space.getEnvironment(config.environmentId)
 
+  let thisMigrationHistory
   if (argv.persistToSpace) {
     tasks.splice(0, 0, {
       title: `Insert Migration "${migrationName}" into History`,
@@ -280,7 +304,6 @@ async function execMigration (migrationFunction, config) {
         thisMigrationHistory.detail = batches
         const resp = await environment.createEntry('migrationHistory', thisMigrationHistory.update({}))
         thisMigrationHistory.id = resp.sys.id
-        history.push(thisMigrationHistory)
       }
     })
 
