@@ -1,9 +1,8 @@
 import * as path from 'path'
-import * as fs from 'fs'
-import * as yargs from 'yargs'
 import * as globby from 'globby'
 
 import chalk from 'chalk'
+import * as fs from 'fs'
 import * as inquirer from 'inquirer'
 import * as Listr from 'listr'
 import { createManagementClient } from './lib/contentful-client'
@@ -20,61 +19,6 @@ import Fetcher from '../lib/fetcher'
 import { ParseResult } from '../lib/migration-parser'
 import { MigrationHistory } from '../lib/entities/migration-history'
 
-const argv = yargs
-  .usage('Parses and runs a migration script on a Contentful space.\n\nUsage: contentful-migration [args] <path-to-script-file>\n\nScript: path to a migration script.')
-  .command({
-    command: 'single <filePath>',
-    aliases: ['* <filePath>'],
-    desc: 'Run a single migration script',
-    handler: runSingle
-  })
-  .command('batch <directory|glob>', 'Run a set of migration scripts in filename order', {}, runBatch)
-  .coerce('filePath', (filePath) => {
-    filePath = path.resolve(process.cwd(), filePath)
-    if (!fs.existsSync(filePath)) {
-      throw new Error(chalk`{bold.red Cannot find file ${filePath}}`)
-    }
-    if (fs.statSync(filePath).isDirectory()) {
-      throw new Error(chalk`{bold.red Cannot load migration file ${filePath}: is a directory.\n  Did you mean to run in 'batch' mode?}`)
-    }
-    return filePath
-  })
-  .option('space-id', {
-    alias: 's',
-    describe: 'ID of the space to run the migration script on'
-  }).option('environment-id', {
-    alias: 'e',
-    describe: 'ID of the environment within the space to run the migration script on',
-    default: 'master'
-  })
-  .option('access-token', {
-    alias: 'a',
-    describe: 'The access token to use\nThis takes precedence over environment variables or .contentfulrc'
-  })
-  .option('yes', {
-    alias: 'y',
-    boolean: true,
-    describe: 'Skips any confirmation before applying the migration script',
-    default: false
-  })
-  .option('force', {
-    boolean: true,
-    describe: 'Re-runs any migrations that previously errored or have already completed.',
-    default: false
-  })
-  .option('persist-to-space', {
-    alias: 'p',
-    boolean: true,
-    describe: 'Persists the fact that this migration ran in a History content-type in the Contentful space',
-    default: false
-  })
-  .demandOption(['space-id'], 'Please provide a space ID')
-  .help('h')
-  .alias('h', 'help')
-  .example('contentful-migration', '--space-id abcedef my-migration.js')
-  .strict()
-  .argv
-
 class BatchError extends Error {
   public batch: RequestBatch
   public errors: Error[]
@@ -85,16 +29,20 @@ class BatchError extends Error {
   }
 }
 
-async function runSingle (argv) {
+export async function runSingle (argv) {
   const migrationFunction = loadMigrationFunction(argv.filePath)
 
   const spaceId = argv.spaceId
   const environmentId = argv.environmentId
+  const application = argv.managementApplication || `contentful.migration-cli/${version}`
 
-  const config = {
+  const config: IRunConfig = {
     accessToken: argv.accessToken,
     spaceId,
-    environmentId
+    environmentId,
+    application,
+    persistToSpace: argv.persistToSpace,
+    yes: argv.yes
   }
 
   const client = createClient(config)
@@ -123,14 +71,17 @@ async function runSingle (argv) {
   execMigration(migrationFunction, config, client)
 }
 
-async function runBatch (argv) {
+export async function runBatch (argv) {
   const spaceId = argv.spaceId
   const environmentId = argv.environmentId
-
-  const config = {
+  const application = argv.managementApplication || `contentful.migration-cli/${version}`
+  const config: IRunConfig = {
     accessToken: argv.accessToken,
     spaceId,
-    environmentId
+    environmentId,
+    application,
+    persistToSpace: argv.persistToSpace,
+    yes: argv.yes
   }
 
   let migrationFunctions = []
@@ -180,10 +131,8 @@ async function runBatch (argv) {
   }
 }
 
-function createClient(config) {
-  const clientConfig = Object.assign({
-    application: `contentful.migration-cli/${version}`
-  }, config)
+function createClient(config: IRunConfig) {
+  const clientConfig = Object.assign({}, config)
 
   const client = createManagementClient(clientConfig)
   const makeRequest = function (requestConfig) {
@@ -197,7 +146,7 @@ function createClient(config) {
   return { client, makeRequest, fetcher }
 }
 
-async function execMigration (migrationFunction, config, { client, makeRequest, fetcher }) {
+async function execMigration (migrationFunction, config: IRunConfig, { client, makeRequest, fetcher }) {
 
   const migrationName = path.basename(migrationFunction.filePath)
   const errorsFile = path.join(
@@ -294,7 +243,7 @@ async function execMigration (migrationFunction, config, { client, makeRequest, 
   const environment = await space.getEnvironment(config.environmentId)
 
   let thisMigrationHistory
-  if (argv.persistToSpace) {
+  if (config.persistToSpace) {
     tasks.splice(0, 0, {
       title: `Insert Migration "${migrationName}" into History`,
       task: async () => {
@@ -331,7 +280,7 @@ async function execMigration (migrationFunction, config, { client, makeRequest, 
     }])
   }
 
-  const answers = await confirm({ skipConfirmation: argv.yes })
+  const answers = await confirm({ skipConfirmation: config.yes })
 
   if (answers.applyMigration) {
     try {
@@ -360,4 +309,13 @@ function loadMigrationFunction (filePath) {
     console.log(e)
     process.exit(1)
   }
+}
+
+interface IRunConfig {
+  accessToken: string,
+  spaceId: string,
+  environmentId: string,
+  application: string,
+  persistToSpace: boolean,
+  yes: boolean
 }

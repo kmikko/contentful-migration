@@ -1,4 +1,3 @@
 #!/usr/bin/env node
 
-require('../built/bin/cli');
-
+require('../built/bin/usage-params');
