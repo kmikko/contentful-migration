@@ -73,7 +73,7 @@ export async function runSingle (argv) {
 
 export async function runBatch (argv) {
   const spaceId = argv.spaceId
-  const environmentId = argv.environmentId
+  const environmentId = argv.environmentId || 'master'
   const application = argv.managementApplication || `contentful.migration-cli/${version}`
   const config: IRunConfig = {
     accessToken: argv.accessToken,
