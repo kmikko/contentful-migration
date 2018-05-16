@@ -95,6 +95,22 @@ export interface IValidation {
   [validation: string]: any
 }
 
+export interface IEditorInterfaceOptions {
+
+  /** This help text will show up below the field. */
+  helpText?: string
+  /** (only for fields of type boolean) Shows this text next to the radio button that sets this value to true. Defaults to “Yes”. */
+  trueLabel?: string
+  /** (only for fields of type boolean) Shows this text next to the radio button that sets this value to false. Defaults to “No”. */
+  falseLabel?: string 
+  /** (only for fields of type rating) Number of stars to select from. Defaults to 5. */
+  stars?: number
+  /** (only for fields of type datePicker) – One of "dateonly", "time", "timeZ" (default). Specifies whether to show the clock and/or timezone inputs. */
+  format?: 'dateonly' | 'time' | 'timeZ'
+  /** string (only for fields of type datePicker) – Specifies which type of clock to use. Must be one of the strings "12" or "24" (default). */
+  ampm?: '12' | '24'
+}
+
 export interface ContentType {
   id: string
   instanceId: string
@@ -125,8 +141,9 @@ export interface ContentType {
    * 
    * @param fieldId The ID of the field.
    * @param widgetId The new widget ID for the field.
+   * @param settings Widget settings
    */
-  changeEditorInterface (fieldId: string, widgetId: string): void
+  changeEditorInterface (fieldId: string, widgetId: string, settings?: IEditorInterfaceOptions): void
 }
 
 export interface IContentTypeOptions {
