@@ -18,6 +18,7 @@ import { RequestBatch } from '../lib/offline-api/index'
 import Fetcher from '../lib/fetcher'
 import { ParseResult } from '../lib/migration-parser'
 import { MigrationHistory } from '../lib/entities/migration-history'
+import { getConfig } from './lib/config'
 
 class BatchError extends Error {
   public batch: RequestBatch
@@ -51,20 +52,20 @@ export async function runSingle (argv) {
 
   let thisMigrationHistory = history.filter(m => m.migrationName === migrationName && m.completed).pop()
   if (thisMigrationHistory) {
-    console.log(chalk`{gray Migration previously completed at ${new Date(thisMigrationHistory.completed).toString()}}`)
+    console.error(chalk`{gray Migration previously completed at ${new Date(thisMigrationHistory.completed).toString()}}`)
     if (!argv.force) {
       return
     }
-    console.log(chalk`  {gray Re-running migration anyways due to "--force" parameter}`)
+    console.error(chalk`  {gray Re-running migration anyways due to "--force" parameter}`)
   } else {
     thisMigrationHistory = history.filter(m => m.migrationName === migrationName).pop()
     if (thisMigrationHistory) {
-      console.log(chalk`⚠️  {bold.yellow Migration failed before completion at ${new Date(thisMigrationHistory.started).toString()}}`)
+      console.error(chalk`⚠️  {bold.yellow Migration failed before completion at ${new Date(thisMigrationHistory.started).toString()}}`)
       if (!argv.force) {
-        console.log(chalk`  {bold.yellow Please manually inspect the data model for errors and then re-run using "--force"}`)
+        console.error(chalk`  {bold.yellow Please manually inspect the data model for errors and then re-run using "--force"}`)
         return
       }
-      console.log(chalk`  {gray Re-running migration anyways due to "--force" parameter}`)
+      console.error(chalk`  {gray Re-running migration anyways due to "--force" parameter}`)
     }
   }
 
@@ -72,17 +73,12 @@ export async function runSingle (argv) {
 }
 
 export async function runBatch (argv) {
-  const spaceId = argv.spaceId
-  const environmentId = argv.environmentId || 'master'
   const application = argv.managementApplication || `contentful.migration-cli/${version}`
-  const config: IRunConfig = {
-    accessToken: argv.accessToken,
-    spaceId,
-    environmentId,
+  const config: IRunConfig = Object.assign({
     application,
     persistToSpace: argv.persistToSpace,
     yes: argv.yes
-  }
+  }, getConfig(argv))
 
   let migrationFunctions = []
   let glob
@@ -100,12 +96,12 @@ export async function runBatch (argv) {
   files.sort()
 
   migrationFunctions.push(...files.map(f => loadMigrationFunction(path.resolve(process.cwd(), f))))
-  
+
   const client = createClient(config)
   const history = await client.fetcher.getMigrationHistory()
 
   if (migrationFunctions.length === 0) {
-    console.log(chalk`{bold.yellow No migrations found in ${glob}}`)
+    console.error(chalk`{bold.yellow No migrations found in ${glob}}`)
   } else {
     for (let i = 0; i < migrationFunctions.length; i++) {
       const migration = migrationFunctions[i]
@@ -113,25 +109,25 @@ export async function runBatch (argv) {
       const migrationName = path.basename(migration.filePath)
       let thisMigrationHistory = history.filter(m => m.migrationName === migrationName && m.completed).pop()
       if (thisMigrationHistory) {
-        console.log(chalk`{gray Migration ${(i + 1).toString()}: ${migrationName}\n  previously completed at ${new Date(thisMigrationHistory.completed).toString()}}`)
+        console.error(chalk`{gray Migration ${(i + 1).toString()}: ${migrationName}\n  previously completed at ${new Date(thisMigrationHistory.completed).toString()}}`)
       } else {
         thisMigrationHistory = history.filter(m => m.migrationName === migrationName).pop()
         if (thisMigrationHistory) {
-          console.log(chalk`⚠️  {bold.yellow Migration ${(i + 1).toString()}: ${migrationName}\n  failed before completion at ${new Date(thisMigrationHistory.started).toString()}}`)
+          console.error(chalk`⚠️  {bold.yellow Migration ${(i + 1).toString()}: ${migrationName}\n  failed before completion at ${new Date(thisMigrationHistory.started).toString()}}`)
           if (!argv.force) {
-            console.log(chalk`  {bold.yellow   Please manually inspect the data model for errors and then re-run using "--force"}`)
+            console.error(chalk`  {bold.yellow   Please manually inspect the data model for errors and then re-run using "--force"}`)
             return
           }
-          console.log(chalk`  {bold.yellow   Re-running migration anyways due to "--force" parameter}`)
+          console.error(chalk`  {bold.yellow   Re-running migration anyways due to "--force" parameter}`)
         }
-        console.log(chalk`{bold.cyan Migration ${(i + 1).toString()}: ${migrationName}}`)
+        console.error(chalk`{bold.cyan Migration ${(i + 1).toString()}: ${migrationName}}`)
         await execMigration(migration, config, client)
       }
     }
   }
 }
 
-function createClient(config: IRunConfig) {
+function createClient (config: IRunConfig) {
   const clientConfig = Object.assign({}, config)
 
   const client = createManagementClient(clientConfig)
@@ -146,7 +142,7 @@ function createClient(config: IRunConfig) {
   return { client, makeRequest, fetcher }
 }
 
-async function execMigration (migrationFunction, config: IRunConfig, { client, makeRequest, fetcher }) {
+async function execMigration (migrationFunction, config: IRunConfig, { client, makeRequest }) {
 
   const migrationName = path.basename(migrationFunction.filePath)
   const errorsFile = path.join(
@@ -154,7 +150,7 @@ async function execMigration (migrationFunction, config: IRunConfig, { client, m
     `errors-${migrationName}-${Date.now()}.log`
   )
 
-  const migrationParser = createMigrationParser(fetcher)
+  const migrationParser = createMigrationParser(makeRequest, config)
 
   let parseResult: ParseResult
 
@@ -164,12 +160,12 @@ async function execMigration (migrationFunction, config: IRunConfig, { client, m
     if (e instanceof SpaceAccessError) {
       const message = [
         chalk`{red.bold ${e.message}}\n`,
-        chalk`🚨  {bold.red Migration unsuccessful}`
+        chalk`�  {bold.red Migration unsuccessful}`
       ].join('\n')
-      console.log(message)
+      console.error(message)
       process.exit(1)
     }
-    console.log(e)
+    console.error(e)
     process.exit(1)
   }
 
@@ -285,17 +281,17 @@ async function execMigration (migrationFunction, config: IRunConfig, { client, m
   if (answers.applyMigration) {
     try {
       const successfulMigration = await (new Listr(tasks)).run()
-      console.log(chalk`🎉  {bold.green Migration successful}`)
+      console.error(chalk`�  {bold.green Migration successful}`)
       return successfulMigration
     } catch (err) {
-      console.log(chalk`🚨  {bold.red Migration unsuccessful}`)
-      console.log(chalk`{red ${err.message}}\n`)
-      err.errors.forEach((err) => console.log(chalk`{red ${err}}\n\n`))
+      console.error(chalk`�  {bold.red Migration unsuccessful}`)
+      console.error(chalk`{red ${err.message}}\n`)
+      err.errors.forEach((err) => console.error(chalk`{red ${err}}\n\n`))
       await Promise.all(serverErrorsWritten)
-      console.log(`Please check the errors log for more details: ${errorsFile}`)
+      console.error(`Please check the errors log for more details: ${errorsFile}`)
     }
   } else {
-    console.log(chalk`⚠️  {bold.yellow Migration aborted}`)
+    console.error(chalk`⚠️  {bold.yellow Migration aborted}`)
   }
 }
 
@@ -305,16 +301,16 @@ function loadMigrationFunction (filePath) {
     ret.filePath = filePath
     return ret
   } catch (e) {
-    console.log(chalk`{red.bold The ${filePath} script could not be parsed, as it seems to contain syntax errors.}\n`)
-    console.log(e)
+    console.error(chalk`{red.bold The ${filePath} script could not be parsed, as it seems to contain syntax errors.}\n`)
+    console.error(e)
     process.exit(1)
   }
 }
 
 interface IRunConfig {
-  accessToken: string,
-  spaceId: string,
-  environmentId: string,
+  accessToken?: string,
+  spaceId?: string,
+  environmentId?: string,
   application: string,
   persistToSpace: boolean,
   yes: boolean

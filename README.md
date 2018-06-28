@@ -1,89 +1,183 @@
-🚚 Contentful migrations
-===============
+![header](./.github/header.png)
+<p align="center">
+  <a href="https://www.contentful.com/slack/">
+    <img src="https://img.shields.io/badge/-Join%20Community%20Slack-2AB27B.svg?logo=slack&maxAge=31557600" alt="Join Contentful Community Slack">
+  </a>
+  &nbsp;
+  <a href="https://www.contentfulcommunity.com/">
+    <img src="https://img.shields.io/badge/-Join%20Community%20Forum-3AB2E6.svg?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MiA1OSI+CiAgPHBhdGggZmlsbD0iI0Y4RTQxOCIgZD0iTTE4IDQxYTE2IDE2IDAgMCAxIDAtMjMgNiA2IDAgMCAwLTktOSAyOSAyOSAwIDAgMCAwIDQxIDYgNiAwIDEgMCA5LTkiIG1hc2s9InVybCgjYikiLz4KICA8cGF0aCBmaWxsPSIjNTZBRUQyIiBkPSJNMTggMThhMTYgMTYgMCAwIDEgMjMgMCA2IDYgMCAxIDAgOS05QTI5IDI5IDAgMCAwIDkgOWE2IDYgMCAwIDAgOSA5Ii8+CiAgPHBhdGggZmlsbD0iI0UwNTM0RSIgZD0iTTQxIDQxYTE2IDE2IDAgMCAxLTIzIDAgNiA2IDAgMSAwLTkgOSAyOSAyOSAwIDAgMCA0MSAwIDYgNiAwIDAgMC05LTkiLz4KICA8cGF0aCBmaWxsPSIjMUQ3OEE0IiBkPSJNMTggMThhNiA2IDAgMSAxLTktOSA2IDYgMCAwIDEgOSA5Ii8+CiAgPHBhdGggZmlsbD0iI0JFNDMzQiIgZD0iTTE4IDUwYTYgNiAwIDEgMS05LTkgNiA2IDAgMCAxIDkgOSIvPgo8L3N2Zz4K&maxAge=31557600"
+      alt="Join Contentful Community Forum">
+  </a>
+</p>
 
-[![Build Status](https://travis-ci.org/contentful/contentful-migration.svg?branch=master)](https://travis-ci.org/contentful/contentful-migration) [![codecov](https://codecov.io/gh/contentful/contentful-migration/branch/master/graph/badge.svg)](https://codecov.io/gh/contentful/contentful-migration)
+# contentful-migration - content model migration tool
 
-Describe and execute changes to your content model and transform entry content.
+> Describe and execute changes to your content model and transform entry content.
+>This tool is currently available in **Beta**.
 
-This CLI is currently available in **Beta**.
+<p align="center">
+  <img src="https://img.shields.io/badge/Status-Maintained-green.svg" alt="This repository is actively maintained" /> &nbsp;
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/license-MIT-brightgreen.svg" alt="MIT License" />
+  </a>
+  &nbsp;
+  <a href="https://travis-ci.org/contentful/contentful-migration">
+    <img src="https://travis-ci.org/contentful/contentful-migration.svg?branch=master" alt="Build Status">
+  </a>
+</p>
 
-## Installation
+
+<p align="center">
+  <a href="https://www.npmjs.com/package/contentful-migration">
+    <img src="https://img.shields.io/npm/v/contentful-migration.svg" alt="NPM">
+  </a>
+  &nbsp;
+  <a href="http://npm-stat.com/charts.html?package=contentful-migration">
+    <img src="https://img.shields.io/npm/dm/contentful-migration.svg" alt="NPM downloads">
+  </a>
+  &nbsp;
+</p>
+
+**What is Contentful?**
+
+[Contentful](https://www.contentful.com/) provides content infrastructure for digital teams to power websites, apps, and devices. Unlike a CMS, Contentful was built to integrate with the modern software stack. It offers a central hub for structured content, powerful management and delivery APIs, and a customizable web app that enable developers and content creators to ship their products faster.
+
+<details>
+
+<summary>Table of contents</summary>
+<!-- TOC -->
+
+- [contentful-migration - content model migration tool](#contentful-migration---content-model-migration-tool)
+  - [Core Features](#core-features)
+  - [Pre-requisites && Installation](#pre-requisites--installation)
+    - [Pre-requisites](#pre-requisites)
+    - [Installation](#installation)
+  - [Usage](#usage)
+  - [:exclamation: Usage as CLI](#exclamation-usage-as-cli)
+    - [Usage as a library](#usage-as-a-library)
+  - [Documentation & References](#documentation--references)
+    - [Configuration](#configuration)
+    - [Chaining vs Object notation](#chaining-vs-object-notation)
+    - [`migration`](#migration)
+      - [`createContentType(id[, opts])` : [ContentType](#contenttype)](#createcontenttypeid-opts--contenttypecontenttype)
+      - [`editContentType(id[, opts])` : [ContentType](#contenttype)](#editcontenttypeid-opts--contenttypecontenttype)
+      - [`deleteContentType(id)`](#deletecontenttypeid)
+      - [`transformEntries(config)`](#transformentriesconfig)
+        - [`transformEntries` Example](#transformentries-example)
+      - [`deriveLinkedEntries(config)`](#derivelinkedentriesconfig)
+        - [`deriveLinkedEntries` Example](#derivelinkedentries-example)
+    - [Content type](#content-type)
+      - [`createField(id[, opts])` : [Field](#field)](#createfieldid-opts--fieldfield)
+      - [`editField(id[, opts])` : [Field](#field)](#editfieldid-opts--fieldfield)
+      - [`deleteField(id)` : void](#deletefieldid--void)
+      - [`changeFieldId (currentId, newId)` : void](#changefieldid-currentid-newid--void)
+      - [`changeEditorInterface (fieldId, widgetId[, settings])` : void](#changeeditorinterface-fieldid-widgetid-settings--void)
+    - [Field](#field)
+  - [Validation errors](#validation-errors)
+  - [Example migrations](#example-migrations)
+  - [Reach out to us](#reach-out-to-us)
+    - [You have questions about how to use this library?](#you-have-questions-about-how-to-use-this-library)
+    - [You found a bug or want to propose a feature?](#you-found-a-bug-or-want-to-propose-a-feature)
+    - [You need to share confidential information or have other questions?](#you-need-to-share-confidential-information-or-have-other-questions)
+  - [Get involved](#get-involved)
+  - [License](#license)
+  - [Code of Conduct](#code-of-conduct)
+
+<!-- /TOC -->
+</details>
+
+## Core Features
+
+- Content type
+  - Edit Content type
+  - Create a Content type
+- Entries
+  - Tranform Entries for a Given Content type
+  - Derives a new entry and sets up a reference to it on the source entry
+- Fields
+  - Create a field
+  - Edit a field
+  - Delete a field
+  - Rename a field
+  - Change editorInterface
+
+## Pre-requisites && Installation
+
+### Pre-requisites
+
+- node.js 8.x
+
+### Installation
 
 ```js
-npm install -g contentful-migration
+npm install contentful-migration
 ```
 
 ## Usage
 
-### Usage as a cli
+## :exclamation: Usage as CLI
 
-![Usage demo](examples/demo.gif)
-
-```sh
-contentful-migration --space-id <space id to use> <path to migration description file>
-```
-
-In your migration description file, export a function that accepts the `migration` object as its argument. For example:
-
-```javascript
-module.exports = function (migration) {
-  const dog = migration.createContentType('dog');
-  const name = dog.createField('name');
-  name.type('Symbol').required(true);
-};
-```
+> We moved the CLI version of this tool into our [Contentful CLI](https://github.com/contentful/contentful-cli). This allows our users to use and install only one single CLI tool to get the full Contentful experience.
+>
+> Please have a look at the [Contentful CLI migration command documentation](https://github.com/contentful/contentful-cli/tree/master/docs/space/migration) to learn more about how to use this as command line tool.
 ### Usage as a library
 
 ```javascript
-const runMigration = require('contentful-migration/built/bin/cli')
+const runMigration = require('contentful-migration/built/bin/cli').default
 const options = {
-  fielPath: '<migration-file-path>',
+  filePath: '<migration-file-path>',
   spaceId: '<space-id>',
   accessToken: '<access-token>'
 }
 runMigration(options)
+  .then(() => console.log('Migration Done!'))
+  .catch((e) => console.error)
 ```
 
 In your migration description file, export a function that accepts the `migration` object as its argument. For example:
 
 ```javascript
-module.exports = function (migration) {
+module.exports = function (migration, context) {
   const dog = migration.createContentType('dog');
   const name = dog.createField('name');
   name.type('Symbol').required(true);
 };
 ```
 
-## Setup
+## Documentation & References
 
-You need to export the following environment variables for the CLI to work:
-- `CONTENTFUL_MANAGEMENT_ACCESS_TOKEN` – The [personal access token](https://www.contentful.com/developers/docs/references/content-management-api/#/reference/personal-access-tokens/personal-access-token) for accessing the CMA.
-- `HTTP_PROXY` or `http_proxy` _(optional)_ – The settings for the HTTP proxy in the shape of `http://[user:password@]<host>[:port]`.
-- `HTTPS_PROXY` or `https_proxy` _(optional)_ – The settings for the HTTPS proxy in the shape of `https://[user:password@]<host>[:port]`.
+### Configuration
 
-If you are using the [Contentful CLI](https://www.npmjs.com/package/contentful-cli) these will be automatically picked up from your `~/.contentfulrc.json` configuration file.
+| Name          | Default    | Type    | Description                                                 | Required |
+|---------------|------------|---------|-------------------------------------------------------------|----------|
+| filePath      |            | string  | The path to the migration file                              | true     |
+| spaceId       |            | string  | ID of the space to run the migration script on              | true     |
+| environmentId | `'master'` | string  | ID of the environment within the space to run the           | false    |
+| accessToken   |            | string  | The access token to use                                     | true     |
+| yes           | false      | boolean | Skips any confirmation before applying the migration,script | false    |
 
-Please note that the environment variables will take precedence over the `~/.contentfulrc.json` configuration.
-
-## Chaining vs Object notation
+### Chaining vs Object notation
 
 All methods described below can be used in two flavors:
+
  1. The chained approach:
+
     ```javascript
     const author = migration.createContentType('author')
       .name('Author')
       .description('Author of blog posts or pages')
     ```
- 2. The object approach:
+
+ 1. The object approach:
+
     ```javascript
     const author = migration.createContentType('author', {
       name: 'Author',
       description: 'Author of blog posts or pages'
     })
     ```
-    While both approaches work, **it is recommended to use the chained approach** since validation errors will display context information whenever an error is detected, along with a line number. The object notation will lead the validation error to only show the line where the object is described, whereas the chained notation will show precisely where the error is located.
 
-## Reference documentation
+    While both approaches work, **it is recommended to use the chained approach** since validation errors will display context information whenever an error is detected, along with a line number. The object notation will lead the validation error to only show the line where the object is described, whereas the chained notation will show precisely where the error is located.
 
 ### `migration`
 
@@ -96,6 +190,7 @@ Creates a content type with provided `id` and returns a reference to the newly c
 **`id : string`** – The ID of the content type.
 
 **`opts : Object`** – Content type definition, with the following options:
+
 - **`name : string`** – Name of the content type.
 - **`description : string`** – Description of the content type.
 - **`displayField : string`** – ID of the field to use as the display field for the content type.
@@ -111,23 +206,21 @@ Deletes the content type with the provided id and returns `undefined`. Note that
 
 #### `transformEntries(config)`
 
-For the given content type, transforms all its entries according to the user-provided `transformEntryForLocale` function. For each entry, the CLI will call this function once per locale in the space, passing in the `from` fields and the locale as arguments. 
-The transform function is expected to return an object with the desired target fields. If it returns `undefined`, this entry locale will be left untouched. 
-
-
+For the given content type, transforms all its entries according to the user-provided `transformEntryForLocale` function. For each entry, the CLI will call this function once per locale in the space, passing in the `from` fields and the locale as arguments.
+The transform function is expected to return an object with the desired target fields. If it returns `undefined`, this entry locale will be left untouched.
 
 **`config : Object`** – Content transformation definition, with the following properties:
+
 - **`contentType : string`** _(required)_ – Content type ID
 - **`from : array`** _(required)_ – Array of the source field IDs
 - **`to : array`** _(required)_ – Array of the target field IDs
 - **`transformEntryForLocale : function (fields, locale): object`** _(required)_ – Transformation function to be applied.
     - `fields` is an object containing each of the `from` fields. Each field will contain their current localized values (i.e. `from == {myField: {'en-US': 'my field value'}}`)
-    - `locale` one of the locales in the space being transformed  
-
-   The return value must be an object with the same keys as specified in `to`. Their values will be written to the respective entry fields for the current locale (i.e. `{nameField: 'myNewValue'}`). If it returns `undefined`, this the values for this locale on the entry will be left untouched. 
+    - `locale` one of the locales in the space being transformed
+  The return value must be an object with the same keys as specified in `to`. Their values will be written to the respective entry fields for the current locale (i.e. `{nameField: 'myNewValue'}`). If it returns `undefined`, this the values for this locale on the entry will be left untouched.
 - **`shouldPublish : boolean`** _(optional)_ – If `true`, the transformed entries will be published. If `false`, both will remain in draft state (default `true`)
 
-### Example
+##### `transformEntries` Example
 
 ```javascript
 migration.transformEntries({
@@ -149,10 +242,11 @@ For the complete version, please refer to [this example](./examples/12-transform
 #### `deriveLinkedEntries(config)`
 
 For each entry of the given content type (source entry), derives a new entry and sets up a reference to it on the source entry. The content of the new entry is generated by the user-provided `deriveEntryForLocale` function.
-For each source entry, this function will be called as many times as there are locales in the space. Each time, it will be called with the `from` fields and one of the locales as arguments. 
+For each source entry, this function will be called as many times as there are locales in the space. Each time, it will be called with the `from` fields and one of the locales as arguments.
 The derive function is expected to return an object with the desired target fields. If it returns `undefined`, the new entry will have no values for the current locale.
 
 **`config : Object`** – Entry derivation definition, with the following properties:
+
 - **`contentType : string`** _(required)_ – Source content type ID
 
 - **`derivedContentType : string`** _(required)_ – Target content type ID
@@ -170,11 +264,53 @@ The derive function is expected to return an object with the desired target fiel
   - `fields` is an object containing each of the `from` fields. Each field will contain their current localized values (i.e. `fields == {myField: {'en-US': 'my field value'}}`)
   - `locale` one of the locales in the space being transformed
 
-   The return value must be an object with the same keys as specified in `derivedFields`. Their values will be written to the respective new entry fields for the current locale (i.e. `{nameField: 'myNewValue'}`)
+  The return value must be an object with the same keys as specified in `derivedFields`. Their values will be written to the respective new entry fields for the current locale (i.e. `{nameField: 'myNewValue'}`)
 
 - **`shouldPublish : boolean`** _(optional)_ – If `true`, both the source and the derived entries will be published. If `false`, both will remain in draft state (default `true`)
 
+### `context`
+
+There may be cases where you want to use Contentful API features that are not supported by the `migration` object. For these cases you have access to the internal configuration of the running migration in a `context` object.
+
+```javascript
+module.exports = function (migration, { makeRequest, spaceId, accessToken }) {
+  const contentType = await makeRequest({
+    method: 'GET',
+    url: `/content_types?sys.id[in]=foo`
+  });
+
+  const anyOtherTool = new AnyOtherTool({ spaceId, accessToken })
+};
+```
+
+#### `makeRequest(config)`
+
+The function used by the migration object to talk to the Contentful Management API. This can be useful if you want to use API features that may not be supported by the `migration` object.
+
+`config : Object` - Configuration for the request based on [the Contentful management SDK](https://contentful.github.io/contentful-management.js/contentful-management/5.0.0-beta2/ContentfulClientAPI.html#.rawRequest)
+  - `method` : `string` – HTTP method
+  - `url` : `string` - HTTP endpoint
+
+```javascript
+module.exports = function (migration, { makeRequest }) {
+  const contentType = await makeRequest({
+    method: 'GET',
+    url: `/content_types?sys.id[in]=foo`
+  })
+};
+```
+
+#### `spaceId` : `string`
+
+The space ID that was set for the current migration.
+
+#### `accessToken` : `string`
+
+The access token that was set for the current migration.
+
 ### Example
+
+##### `deriveLinkedEntries` Example
 
 ```javascript
 migration.deriveLinkedEntries({
@@ -192,7 +328,6 @@ migration.deriveLinkedEntries({
         return;
       }
       const [firstName, lastName] = inputFields.owner[locale].split(' ');
-    
       return {
         firstName,
         lastName
@@ -214,6 +349,7 @@ Creates a field with provided `id`.
 **`id : string`** – The ID of the field.
 
 **`opts : Object`** – Field definition, with the following options:
+
 - **`name : string`** _(required)_ – Field name.
 - **`type : string`** _(required)_ – Field type, amongst the following values:
   - `Symbol` (Short text)
@@ -228,6 +364,7 @@ Creates a field with provided `id`.
   - `Link` (requires `linkType`)
 - **`items : Object`** _(required for type 'Array')_ – Defines the items of an Array field.
   Example:
+
   ```javascript
   items: {
     type: 'Link',
@@ -237,16 +374,19 @@ Creates a field with provided `id`.
     ]
   }
   ```
+
 - **`linkType : string`** _(required for type 'Link')_ – Type of the referenced entry.
   Can take the same values as the ones listed for `type` above.
 - **`required : boolean`** – Sets the field as required.
 - **`validations : Array`** – Validations for the field.
   Example:
+
   ```javascript
   validations: [
     { in: [ 'Web', 'iOS', 'Android' ] }
   ]
   ```
+
   _See [The CMA documentation](https://www.contentful.com/developers/docs/references/content-management-api/#/reference/content-types/content-type) for the list of available validations._
 - **`localized : boolean`** – Sets the field as localized.
 - **`disabled : boolean`** – Sets the field as disabled, hence not editable by authors.
@@ -301,63 +441,59 @@ The field object has the same methods as the properties listed in the [`ContentT
 
 You can learn more from the [possible validation errors here](./docs/validation.md).
 
-## Examples
+## Example migrations
 
 You can check out the [examples](/examples) to learn more about the migrations DSL.
 Each example file is prefixed with a sequence number, specifying the order in which you're supposed to run the migrations, as follows:
 
-```bash
-export CONTENTFUL_MANAGEMENT_ACCESS_TOKEN=your-token
-export SPACE_ID=your-space-id
-contentful-migration --space-id $SPACE_ID 01-angry-dog.js
-contentful-migration --space-id $SPACE_ID 02-friendly-dog.js
-contentful-migration --space-id $SPACE_ID 03-long-example.js
-contentful-migration --space-id $SPACE_ID 04-steps-errors.js
-contentful-migration --space-id $SPACE_ID 05-plan-errors.js
-contentful-migration --space-id $SPACE_ID 06-delete-field.js
-contentful-migration --space-id $SPACE_ID 07-display-field.js
-```
+```javascript
+const runMigration = require('contentful-migration/built/bin/cli').default
 
-## Programmatic Usage
-
-To use the CLI without the manual confirmation step (e.g. in a CI environment), you can pass the `--yes` (or just `-y`) flag:
-
-```bash
-contentful-migration --yes --space-id YOUR_TOKEN ./your-migration.js
-```
-
-## Writing Migrations in Typescript
-
-You can use Typescript to write your migration files using `ts-node`!  First `npm install --save ts-node typescript`,
-then run your migration with ts-node:
-
-```
-node_modules/.bin/ts-node node_modules/.bin/contentful-migration -s $CONTENTFUL_SPACE_ID -a $CONTENTFUL_MANAGEMENT_TOKEN my_migration.ts
-```
-
-An example Typescript migration:
-```typescript
-import Migration from 'contentful-migration-cli'
-
-// typecast to 'Migration' to ensure you get type hints in your editor
-export = function (migration: Migration) {
-  const dog = migration.createContentType('dog', {
-    name: 'Dog'
-  })
-
-  const name = dog.createField('name')
-  name.name('Name')
-    .type('Symbol')
-    .required(true)
+const options = {
+  spaceId: '<space-id>',
+  accessToken: '<access-token>',
+  yes: true
 }
+
+const migrations = async () => {
+  await runMigration({...options, ...{filePath: '01-angry-dog.js'}})
+  await runMigration({...options, ...{filePath: '02-friendly-dog.js'}})
+  await runMigration({...options, ...{filePath: '03-long-example.js'}})
+  await runMigration({...options, ...{filePath: '04-steps-errors.js'}})
+  await runMigration({...options, ...{filePath: '05-plan-errors.js'}})
+  await runMigration({...options, ...{filePath: '06-delete-field.js'}})
+  await runMigration({...options, ...{filePath: '07-display-field.js'}})
+}
+
+migrations()
+
 ```
 
-## Support
+## Reach out to us
 
-If you have a problem with this tool, please file an [issue](https://github.com/contentful/migration-cli/issues/new) here on Github.
+### You have questions about how to use this library?
 
-If you have other problems with Contentful not related to this library, you can contact [Customer Support](https://support.contentful.com).
+- Reach out to our community forum: [![Contentful Community Forum](https://img.shields.io/badge/-Join%20Community%20Forum-3AB2E6.svg?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MiA1OSI+CiAgPHBhdGggZmlsbD0iI0Y4RTQxOCIgZD0iTTE4IDQxYTE2IDE2IDAgMCAxIDAtMjMgNiA2IDAgMCAwLTktOSAyOSAyOSAwIDAgMCAwIDQxIDYgNiAwIDEgMCA5LTkiIG1hc2s9InVybCgjYikiLz4KICA8cGF0aCBmaWxsPSIjNTZBRUQyIiBkPSJNMTggMThhMTYgMTYgMCAwIDEgMjMgMCA2IDYgMCAxIDAgOS05QTI5IDI5IDAgMCAwIDkgOWE2IDYgMCAwIDAgOSA5Ii8+CiAgPHBhdGggZmlsbD0iI0UwNTM0RSIgZD0iTTQxIDQxYTE2IDE2IDAgMCAxLTIzIDAgNiA2IDAgMSAwLTkgOSAyOSAyOSAwIDAgMCA0MSAwIDYgNiAwIDAgMC05LTkiLz4KICA8cGF0aCBmaWxsPSIjMUQ3OEE0IiBkPSJNMTggMThhNiA2IDAgMSAxLTktOSA2IDYgMCAwIDEgOSA5Ii8+CiAgPHBhdGggZmlsbD0iI0JFNDMzQiIgZD0iTTE4IDUwYTYgNiAwIDEgMS05LTkgNiA2IDAgMCAxIDkgOSIvPgo8L3N2Zz4K&maxAge=31557600)](https://support.contentful.com/)
+- Jump into our community slack channel: [![Contentful Community Slack](https://img.shields.io/badge/-Join%20Community%20Slack-2AB27B.svg?logo=slack&maxAge=31557600)](https://www.contentful.com/slack/)
+
+### You found a bug or want to propose a feature?
+
+- File an issue here on GitHub: [![File an issue](https://img.shields.io/badge/-Create%20Issue-6cc644.svg?logo=github&maxAge=31557600)](https://github.com/contentful/contentful-migration/issues/new). Make sure to remove any credential from your code before sharing it.
+
+### You need to share confidential information or have other questions?
+
+- File a support ticket at our Contentful Customer Support: [![File support ticket](https://img.shields.io/badge/-Submit%20Support%20Ticket-3AB2E6.svg?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MiA1OSI+CiAgPHBhdGggZmlsbD0iI0Y4RTQxOCIgZD0iTTE4IDQxYTE2IDE2IDAgMCAxIDAtMjMgNiA2IDAgMCAwLTktOSAyOSAyOSAwIDAgMCAwIDQxIDYgNiAwIDEgMCA5LTkiIG1hc2s9InVybCgjYikiLz4KICA8cGF0aCBmaWxsPSIjNTZBRUQyIiBkPSJNMTggMThhMTYgMTYgMCAwIDEgMjMgMCA2IDYgMCAxIDAgOS05QTI5IDI5IDAgMCAwIDkgOWE2IDYgMCAwIDAgOSA5Ii8+CiAgPHBhdGggZmlsbD0iI0UwNTM0RSIgZD0iTTQxIDQxYTE2IDE2IDAgMCAxLTIzIDAgNiA2IDAgMSAwLTkgOSAyOSAyOSAwIDAgMCA0MSAwIDYgNiAwIDAgMC05LTkiLz4KICA8cGF0aCBmaWxsPSIjMUQ3OEE0IiBkPSJNMTggMThhNiA2IDAgMSAxLTktOSA2IDYgMCAwIDEgOSA5Ii8+CiAgPHBhdGggZmlsbD0iI0JFNDMzQiIgZD0iTTE4IDUwYTYgNiAwIDEgMS05LTkgNiA2IDAgMCAxIDkgOSIvPgo8L3N2Zz4K&maxAge=31557600)](https://www.contentful.com/support/)
+
+## Get involved
+
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?maxAge=31557600)](http://makeapullrequest.com)
+
+We appreciate any help on our repositories. For more details about how to contribute see our [CONTRIBUTING.md](CONTRIBUTING.md) document.
 
 ## License
 
-MIT
+This repository is published under the [MIT](LICENSE) license.
+
+## Code of Conduct
+
+We want to provide a safe, inclusive, welcoming, and harassment-free space and experience for all participants, regardless of gender identity and expression, sexual orientation, disability, physical appearance, socioeconomic status, body size, ethnicity, nationality, level of experience, age, religion (or lack thereof), or other identity markers.
