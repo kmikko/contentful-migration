@@ -3,7 +3,7 @@ import * as path from 'path'
 import * as fs from 'fs'
 import * as yargs from 'yargs'
 
-import { runSingle, runBatch } from './cli'
+import { runMigration, runBatchMigration } from './cli'
 
 const { version } = require('../../package.json')
 
@@ -13,9 +13,9 @@ export default yargs
     command: 'single <filePath>',
     aliases: ['* <filePath>'],
     desc: 'Run a single migration script',
-    handler: runSingle
+    handler: runMigration
   })
-  .command('batch <directory|glob>', 'Run a set of migration scripts in filename order', {}, runBatch)
+  .command('batch <directory|glob>', 'Run a set of migration scripts in filename order', {}, runBatchMigration)
   .coerce('filePath', (filePath) => {
     filePath = path.resolve(process.cwd(), filePath)
     if (!fs.existsSync(filePath)) {

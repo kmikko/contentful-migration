@@ -19,6 +19,15 @@ import Fetcher from '../lib/fetcher'
 import { ParseResult } from '../lib/migration-parser'
 import { MigrationHistory } from '../lib/entities/migration-history'
 import { getConfig } from './lib/config'
+import ValidationError from '../lib/interfaces/errors'
+
+class ManyError extends Error {
+  public errors: (Error | ValidationError)[]
+  constructor (message: string, errors: (Error | ValidationError)[]) {
+    super(message)
+    this.errors = errors
+  }
+}
 
 class BatchError extends Error {
   public batch: RequestBatch
@@ -30,18 +39,30 @@ class BatchError extends Error {
   }
 }
 
-export async function runSingle (argv) {
+type TerminatingFunction = (error: Error) => void
+const makeTerminatingFunction = ({ shouldThrow }) => (error: Error) => {
+  if (shouldThrow) {
+    throw error
+  } else {
+    process.exit(1)
+  }
+}
+
+const createRun = ({ shouldThrow }) => async function runSingle (argv) {
   const migrationFunction = loadMigrationFunction(argv.filePath)
+  const terminate = makeTerminatingFunction({ shouldThrow })
 
   const spaceId = argv.spaceId
   const environmentId = argv.environmentId
   const application = argv.managementApplication || `contentful.migration-cli/${version}`
+  const feature = argv.managementFeature || `migration-library`
 
   const config: IRunConfig = {
     accessToken: argv.accessToken,
     spaceId,
     environmentId,
     application,
+    feature,
     persistToSpace: argv.persistToSpace,
     yes: argv.yes
   }
@@ -69,13 +90,16 @@ export async function runSingle (argv) {
     }
   }
 
-  execMigration(migrationFunction, config, client)
+  execMigration(migrationFunction, config, client, terminate)
 }
 
-export async function runBatch (argv) {
+const createRunBatch = ({ shouldThrow }) => async function runBatch (argv) {
+  const terminate = makeTerminatingFunction({ shouldThrow })
   const application = argv.managementApplication || `contentful.migration-cli/${version}`
+  const feature = argv.managementFeature || `migration-library`
   const config: IRunConfig = Object.assign({
     application,
+    feature,
     persistToSpace: argv.persistToSpace,
     yes: argv.yes
   }, getConfig(argv))
@@ -121,7 +145,7 @@ export async function runBatch (argv) {
           console.error(chalk`  {bold.yellow   Re-running migration anyways due to "--force" parameter}`)
         }
         console.error(chalk`{bold.cyan Migration ${(i + 1).toString()}: ${migrationName}}`)
-        await execMigration(migration, config, client)
+        await execMigration(migration, config, client, terminate)
       }
     }
   }
@@ -142,7 +166,7 @@ function createClient (config: IRunConfig) {
   return { client, makeRequest, fetcher }
 }
 
-async function execMigration (migrationFunction, config: IRunConfig, { client, makeRequest }) {
+async function execMigration (migrationFunction, config: IRunConfig, { client, makeRequest }, terminate: TerminatingFunction) {
 
   const migrationName = path.basename(migrationFunction.filePath)
   const errorsFile = path.join(
@@ -163,36 +187,37 @@ async function execMigration (migrationFunction, config: IRunConfig, { client, m
         chalk`�  {bold.red Migration unsuccessful}`
       ].join('\n')
       console.error(message)
-      process.exit(1)
+      terminate(new Error(message))
     }
     console.error(e)
-    process.exit(1)
+    terminate(e)
   }
 
   if (parseResult.hasStepsValidationErrors()) {
     renderStepsErrors(parseResult.stepsValidationErrors)
-    process.exit(1)
+    terminate(new ManyError('Step Validation Errors', parseResult.stepsValidationErrors))
   }
 
   if (parseResult.hasPayloadValidationErrors()) {
     renderStepsErrors(parseResult.payloadValidationErrors)
-    process.exit(1)
+    terminate(new ManyError('Payload Validation Errors', parseResult.payloadValidationErrors))
   }
 
   const batches = parseResult.batches
 
   if (parseResult.hasValidationErrors()) {
-    renderValidationErrors(batches)
-    process.exit(1)
+    renderValidationErrors(batches, config.environmentId)
+    terminate(new ManyError('Validation Errors', parseResult.getValidationErrors()))
   }
 
   if (parseResult.hasRuntimeErrors()) {
     renderRuntimeErrors(batches, errorsFile)
     await writeErrorsToLog(parseResult.getRuntimeErrors(), errorsFile)
-    process.exit(1)
+    terminate(new ManyError('Runtime Errors', parseResult.getRuntimeErrors()))
   }
 
-  await renderPlan(batches)
+  await renderPlan(batches, config.environmentId)
+
   const serverErrorsWritten = []
 
   const tasks = batches.map((batch) => {
@@ -295,6 +320,10 @@ async function execMigration (migrationFunction, config: IRunConfig, { client, m
   }
 }
 
+export const runMigration = createRun({ shouldThrow: true })
+export default createRun({ shouldThrow: false })
+export const runBatchMigration = createRunBatch({ shouldThrow: true })
+
 function loadMigrationFunction (filePath) {
   try {
     const ret = require(filePath)
@@ -312,6 +341,7 @@ interface IRunConfig {
   spaceId?: string,
   environmentId?: string,
   application: string,
+  feature: string,
   persistToSpace: boolean,
   yes: boolean
 }
