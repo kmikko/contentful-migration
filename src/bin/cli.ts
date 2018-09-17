@@ -314,6 +314,7 @@ async function execMigration (migrationFunction, config: IRunConfig, { client, m
       err.errors.forEach((err) => console.error(chalk`{red ${err}}\n\n`))
       await Promise.all(serverErrorsWritten)
       console.error(`Please check the errors log for more details: ${errorsFile}`)
+      terminate(err)
     }
   } else {
     console.error(chalk`⚠️  {bold.yellow Migration aborted}`)
