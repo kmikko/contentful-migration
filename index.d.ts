@@ -1,3 +1,4 @@
+import * as axios from '@contentful/axios'
 
 export interface Movement {
   toTheTop()
@@ -109,6 +110,8 @@ export interface IEditorInterfaceOptions {
   format?: 'dateonly' | 'time' | 'timeZ'
   /** string (only for fields of type datePicker) – Specifies which type of clock to use. Must be one of the strings "12" or "24" (default). */
   ampm?: '12' | '24'
+  /** (only for References, many) Select whether to enable Bulk Editing mode */
+  bulkEditing?: boolean
 }
 
 export interface ContentType {
@@ -268,3 +271,24 @@ export default interface Migration {
    */
   deriveLinkedEntries (transformation: IDeriveLinkedEntriesConfig): void
 }
+
+export interface ClientConfig {
+  accessToken?: string
+  spaceId?: string
+  environmentId?: string
+}
+
+export type MakeRequest = (requestConfig: axios.AxiosRequestConfig) => axios.AxiosResponse['data']
+
+export type MigrationContext = ClientConfig & {
+  /**
+   * Makes a raw request to the API using Axios.
+   * The URL should be relative, `spaceId` and `environment` will be automatically prepended.
+   */
+  makeRequest: MakeRequest
+}
+
+/**
+ * The shape of the migration function that should be exported.
+ */
+export type MigrationFunction = (migration: Migration, context?: MigrationContext) => void
