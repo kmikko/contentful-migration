@@ -43,7 +43,8 @@
     "CHANGELOG.md",
     "bin",
     "built",
-    "docs"
+    "docs",
+    "index.d.ts"
   ],
   "nyc": {
     "per-file": true,
