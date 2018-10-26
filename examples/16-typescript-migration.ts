@@ -1,4 +1,4 @@
-import Migration from 'contentful-migration-cli'
+import Migration from 'contentful-migration'
 
 export = function (migration: Migration) {
   const dog = migration.createContentType('dog', {

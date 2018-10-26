@@ -1,10 +1,10 @@
 {
   "name": "contentful-migration",
-  "version": "0.12.1",
+  "version": "0.12.2",
   "description": "Migration tooling for contentful",
   "author": "Contentful GmbH",
   "license": "MIT",
-  "main": "index.js",
+  "main": "index",
   "keywords": [
     "contentful",
     "content model",
@@ -40,6 +40,7 @@
   },
   "files": [
     "README.md",
+    "index.d.ts",
     "CHANGELOG.md",
     "bin",
     "built",
