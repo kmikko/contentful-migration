@@ -7,6 +7,8 @@ import Fetcher from '../../../src/lib/fetcher'
 import { ContentType } from '../../../src/lib/entities/content-type'
 import { APIEditorInterfaces } from '../../../src/lib/interfaces/content-type'
 
+const noOp = () => undefined
+
 describe('Fetcher', function () {
   it('fetches all required Entries in the plan', async function () {
     const intents = await buildIntents(function up (migration) {
@@ -28,7 +30,7 @@ describe('Fetcher', function () {
     request
       .withArgs({
         method: 'GET',
-        url: '/entries?sys.contentType.sys.id[in]=newsArticle&skip=0'
+        url: '/entries?sys.archivedAt[exists]=false&sys.contentType.sys.id[in]=newsArticle&skip=0'
       })
       .resolves({
         skip: 0,
@@ -39,7 +41,7 @@ describe('Fetcher', function () {
     request
       .withArgs({
         method: 'GET',
-        url: '/entries?sys.contentType.sys.id[in]=newsArticle&skip=4'
+        url: '/entries?sys.archivedAt[exists]=false&sys.contentType.sys.id[in]=newsArticle&skip=4'
       })
       .resolves({
         skip: 4,
@@ -55,11 +57,68 @@ describe('Fetcher', function () {
 
     expect(request).to.have.been.calledWith({
       method: 'GET',
-      url: '/entries?sys.contentType.sys.id[in]=newsArticle&skip=0'
+      url: '/entries?sys.archivedAt[exists]=false&sys.contentType.sys.id[in]=newsArticle&skip=0'
     })
     expect(request).to.have.been.calledWith({
       method: 'GET',
-      url: '/entries?sys.contentType.sys.id[in]=newsArticle&skip=4'
+      url: '/entries?sys.archivedAt[exists]=false&sys.contentType.sys.id[in]=newsArticle&skip=4'
+    })
+
+    const result = ['item1', 'item2', 'item3', 'item4', 'item5', 'item6']
+    expect(entries).to.eql(result)
+  })
+
+  it('fetches all Entries of all CTs in the plan if an intent needs them all', async function () {
+    const intents = await buildIntents(function up (migration) {
+      migration.transformEntriesToType({
+        sourceContentType: 'sourceContentType',
+        targetContentType: 'targetContentType',
+        updateReferences: true,
+        removeOldEntries: false,
+        from: ['author', 'authorCity'],
+        identityKey: () => 'ID',
+        transformEntryForLocale: function () {
+          return {}
+        }
+      })
+    }, null, null)
+
+    const request = sinon.stub()
+    request
+      .withArgs({
+        method: 'GET',
+        url: '/entries?sys.archivedAt[exists]=false&skip=0'
+      })
+      .resolves({
+        skip: 0,
+        limit: 4,
+        total: 6,
+        items: ['item1', 'item2', 'item3', 'item4']
+      })
+    request
+      .withArgs({
+        method: 'GET',
+        url: '/entries?sys.archivedAt[exists]=false&skip=4'
+      })
+      .resolves({
+        skip: 4,
+        limit: 4,
+        total: 6,
+        items: ['item5', 'item6']
+      })
+
+    const intentList = new IntentList(intents)
+
+    const fetcher = new Fetcher(request)
+    const entries = await fetcher.getEntriesInIntents(intentList)
+
+    expect(request).to.have.been.calledWith({
+      method: 'GET',
+      url: '/entries?sys.archivedAt[exists]=false&skip=0'
+    })
+    expect(request).to.have.been.calledWith({
+      method: 'GET',
+      url: '/entries?sys.archivedAt[exists]=false&skip=4'
     })
 
     const result = ['item1', 'item2', 'item3', 'item4', 'item5', 'item6']
@@ -70,7 +129,7 @@ describe('Fetcher', function () {
     const intents = await buildIntents(function up (migration) {
       migration.deleteContentType('foo')
       migration.deleteContentType('bar')
-    }, () => {}, {})
+    }, noOp, {})
 
     const request = sinon.stub()
     request
@@ -78,14 +137,24 @@ describe('Fetcher', function () {
         method: 'GET',
         url: '/entries?sys.contentType.sys.id=foo'
       })
-      .resolves({ items: ['item', 'item'] })
+      .resolves({
+        skip: 0,
+        limit: 2,
+        total: 2,
+        items: ['item', 'item']
+      })
 
     request
       .withArgs({
         method: 'GET',
         url: '/entries?sys.contentType.sys.id=bar'
       })
-      .resolves({ items: [] })
+      .resolves({
+        skip: 0,
+        limit: 2,
+        total: 0,
+        items: []
+      })
 
     const intentList = new IntentList(intents)
 
@@ -139,7 +208,7 @@ describe('Fetcher', function () {
 
       migration.deleteContentType('dog')
       migration.deleteContentType('plant')
-    }, () => {}, {})
+    }, noOp, {})
 
     const request = sinon.stub()
 
@@ -171,7 +240,10 @@ describe('Fetcher', function () {
           description: 'A plant!',
           fields: []
         }
-      ]
+      ],
+      skip: 0,
+      limit: 4,
+      total: 4
     })
 
     const intentList = new IntentList(intents)
@@ -181,7 +253,7 @@ describe('Fetcher', function () {
 
     expect(request).to.have.been.calledWith({
       method: 'GET',
-      url: '/content_types?sys.id[in]=person,dog,cat,plant'
+      url: `/content_types?sys.id[in]=person,dog,cat,plant&skip=0`
     })
     expect(contentTypes).to.eql([
       {
@@ -237,7 +309,7 @@ describe('Fetcher', function () {
           }
         }
       })
-    }, () => {}, {})
+    }, noOp, {})
 
     const request = sinon.stub()
 
@@ -268,7 +340,10 @@ describe('Fetcher', function () {
             }
           ]
         }
-      ]
+      ],
+      skip: 0,
+      limit: 0,
+      total: 2
     })
 
     const intentList = new IntentList(intents)
@@ -278,7 +353,7 @@ describe('Fetcher', function () {
 
     expect(request).to.have.been.calledWith({
       method: 'GET',
-      url: '/content_types?sys.id[in]=dog,owner'
+      url: '/content_types?sys.id[in]=dog,owner&skip=0'
     })
   })
 
@@ -288,7 +363,7 @@ describe('Fetcher', function () {
       foo.changeEditorInterface('title', 'singleLine')
       const bar = migration.editContentType('bar')
       bar.changeEditorInterface('desc', 'markdown')
-    }, () => {}, {})
+    }, noOp, {})
 
     const request = sinon.stub()
     request
@@ -362,5 +437,61 @@ describe('Fetcher', function () {
       ]
     })
     expect(editorInterfaces).to.eql(result)
+  })
+
+  it('fetches all locales in the space', async function () {
+    const request = sinon.stub()
+    request
+      .withArgs({
+        method: 'GET',
+        url: '/locales?skip=0'
+      })
+      .resolves({
+        skip: 0,
+        limit: 2,
+        total: 6,
+        items: [{ code: 'a' }, { code: 'b' }]
+      })
+    request
+      .withArgs({
+        method: 'GET',
+        url: '/locales?skip=2'
+      })
+      .resolves({
+        skip: 2,
+        limit: 4,
+        total: 6,
+        items: [{ code: 'c' }, { code: 'd' }]
+      })
+    request
+      .withArgs({
+        method: 'GET',
+        url: '/locales?skip=4'
+      })
+      .resolves({
+        skip: 4,
+        limit: 6,
+        total: 6,
+        items: [{ code: 'e' }, { code: 'f' }]
+      })
+
+    const fetcher = new Fetcher(request)
+    const localeCodes = await fetcher.getLocalesForSpace()
+
+    expect(request).to.have.been.calledWith({
+      method: 'GET',
+      url: '/locales?skip=0'
+    })
+    expect(request).to.have.been.calledWith({
+      method: 'GET',
+      url: '/locales?skip=2'
+    })
+    expect(request).to.have.been.calledWith({
+      method: 'GET',
+      url: '/locales?skip=4'
+    })
+
+    const result = ['a', 'b', 'c', 'd', 'e', 'f']
+    expect(localeCodes).to.eql(result)
   })
 })

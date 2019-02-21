@@ -15,32 +15,30 @@ export default class Fetcher implements APIFetcher {
   }
 
   async getEntriesInIntents (intentList: IntentList): Promise<APIEntry[]> {
+    const loadAllEntries = intentList.getIntents().some((intent) => intent.requiresAllEntries())
+
     const ids: string[] = _.uniq(
       intentList.getIntents()
-      .filter((intent) => intent.isContentTransform() || intent.isEntryDerive())
+      .filter((intent) => intent.isContentTransform() || intent.isEntryDerive() || intent.isEntryTransformToType())
       .map((intent) => intent.getContentTypeId())
     )
 
-    if (ids.length === 0) {
+    if (!loadAllEntries && ids.length === 0) {
       return []
     }
 
-    let entries: APIEntry[] = []
-    let skip: number = 0
-
-    while (true) {
-      const response = await this.makeRequest({
-        method: 'GET',
-        url: `/entries?sys.contentType.sys.id[in]=${ids.join(',')}&skip=${skip}`
-      })
-
-      entries = entries.concat(response.items)
-      skip += response.items.length
-
-      if (skip >= response.total) {
-        break
-      }
+    const filter = {
+      'sys.archivedAt[exists]': 'false'
     }
+
+    // If we want to load all entries, we do not need to add the filter specification
+    // that loads just the entries for related content types
+    // If we do, then we specify the list of CTs that we want entries for
+    if (!loadAllEntries) {
+      filter['sys.contentType.sys.id[in]'] = ids.join(',')
+    }
+
+    const entries = await this.fetchAllPaginatedItems<APIEntry>('/entries', filter)
 
     return entries
   }
@@ -62,12 +60,12 @@ export default class Fetcher implements APIFetcher {
       return []
     }
 
-    const response = await this.makeRequest({
-      method: 'GET',
-      url: `/content_types?sys.id[in]=${ids.join(',')}`
-    })
+    const filter = {
+      'sys.id[in]': ids.join(',')
+    }
 
-    let contentTypes: APIContentType[] = response.items
+    const contentTypes = await this.fetchAllPaginatedItems<APIContentType>('/content_types', filter)
+
     return contentTypes
   }
 
@@ -87,19 +85,16 @@ export default class Fetcher implements APIFetcher {
       return editorInterfaces
     }
     for (let id of contentTypeIds) {
-      await this._fetchEditorInterface(id, editorInterfaces)
+      await this.fetchEditorInterface(id, editorInterfaces)
     }
     return editorInterfaces
   }
 
   async getLocalesForSpace (): Promise<string[]> {
-    const response = await this.makeRequest({
-      method: 'GET',
-      url: `/locales`
-    })
+    type Locale = { code: string }
+    const locales = await this.fetchAllPaginatedItems<Locale>('/locales')
 
-    let locales: string[] = response.items.map((i) => i.code)
-    return locales
+    return locales.map((i) => i.code)
   }
 
   async checkContentTypesForDeletedCts (intentList: IntentList, contentTypes: ContentType[]): Promise<ContentType[]> {
@@ -129,7 +124,7 @@ export default class Fetcher implements APIFetcher {
     })
   }
 
-  private async _fetchEditorInterface (id: string, editorInterfaces: Map<string, APIEditorInterfaces>) {
+  private async fetchEditorInterface (id: string, editorInterfaces: Map<string, APIEditorInterfaces>) {
     try {
       const response = await this.makeRequest({
         method: 'GET',
@@ -174,4 +169,36 @@ export default class Fetcher implements APIFetcher {
       }
     }
   }
+
+  private async fetchAllPaginatedItems<ResponseType> (url: string, params: { [key: string]: string } = {}): Promise<ResponseType[]> {
+    let entities: ResponseType[] = []
+    let skip: number = 0
+
+    while (true) {
+      const paramsWithSkip = {
+        ...params,
+        skip: skip.toString(10)
+      }
+
+      let urlParams = ''
+      for (const [key, value] of Object.entries(paramsWithSkip)) {
+        urlParams = `${urlParams}&${key}=${value}`
+      }
+
+      const response = await this.makeRequest({
+        method: 'GET',
+        url: `${url}?${urlParams.substr(1)}`
+      })
+
+      entities = entities.concat(response.items)
+      skip += response.items.length
+
+      if (skip >= response.total) {
+        break
+      }
+    }
+
+    return entities
+  }
+
 }
