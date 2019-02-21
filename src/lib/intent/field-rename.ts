@@ -1,6 +1,9 @@
 import Intent from './base-intent'
 import { FieldRenameAction } from '../action/field-rename'
 import { EntryFieldRenameAction } from '../action/entry-field-rename'
+import { CopyEditorInterfaceAction } from '../action/editorinterface-copy'
+import { SaveEditorInterfaceAction } from '../action/editorinterface-save'
+import { ResetEditorInterfaceAction } from '../action/editorinterface-reset'
 import { ContentTypeSaveAction } from '../action/content-type-save'
 import { ContentTypePublishAction } from '../action/content-type-publish'
 import { FieldUpdateAction } from '../action/field-update'
@@ -50,6 +53,19 @@ export default class FieldRenameIntent extends Intent {
         this.getFieldId(),
         { newId: this.getNewId() }
       ),
+
+      new CopyEditorInterfaceAction(
+        ctId,
+        this.getFieldId(),
+        this.getNewId()
+      ),
+
+      new ResetEditorInterfaceAction(
+        ctId,
+        this.getFieldId()
+      ),
+
+      new SaveEditorInterfaceAction(ctId),
 
       new EntryFieldRenameAction(
         ctId,

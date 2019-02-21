@@ -1,6 +1,6 @@
 {
   "name": "@watermarkchurch/contentful-migration",
-  "version": "0.13.0",
+  "version": "0.14.2",
   "description": "Migration tooling for contentful",
   "author": "Contentful GmbH & Gordon Burgett <gburget@watermark.org>",
   "license": "MIT",
@@ -27,7 +27,7 @@
     "prepare": "npm run build",
     "test": "NOCK_RECORD=0 npm run build && npm run test-unit && npm run test-integration && npm run test-e2e && npm run lint",
     "test-watch": "npm run test-unit -- --watch",
-    "test-unit": "NODE_ENV=test mocha --compilers ts-node/register --recursive test/unit/lib/ ",
+    "test-unit": "NODE_ENV=test mocha --require test/setup-unit.js --recursive 'test/unit/lib/**/*.spec.{js,ts}'",
     "test-integration": "NODE_ENV=test mocha --require test/integration/setup.js 'test/integration/**/*.spec.js'",
     "test-e2e": "NODE_ENV=test mocha 'test/end-to-end/**/*.spec.js'",
     "cover-unit": "nyc npm run test-unit",
