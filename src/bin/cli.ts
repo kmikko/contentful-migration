@@ -64,6 +64,7 @@ const createRun = ({ shouldThrow }) => async function runSingle (argv) {
     application,
     feature,
     persistToSpace: argv.persistToSpace,
+    quiet: argv.quiet,
     yes: argv.yes
   }
 
@@ -101,6 +102,7 @@ const createRunBatch = ({ shouldThrow }) => async function runBatch (argv) {
     application,
     feature,
     persistToSpace: argv.persistToSpace,
+    quiet: argv.quiet,
     yes: argv.yes
   }, getConfig(argv))
 
@@ -157,7 +159,7 @@ function createClient (config: IRunConfig) {
   const client = createManagementClient(clientConfig)
   const makeRequest = function (requestConfig) {
     const cfg = Object.assign({}, requestConfig, {
-      url: path.join(config.spaceId, 'environments', config.environmentId, requestConfig.url)
+      url: [clientConfig.spaceId, 'environments', clientConfig.environmentId, requestConfig.url].join('/')
     })
     return client.rawRequest(cfg)
   }
@@ -216,7 +218,7 @@ async function execMigration (migrationFunction, config: IRunConfig, { client, m
     terminate(new ManyError('Runtime Errors', parseResult.getRuntimeErrors()))
   }
 
-  await renderPlan(batches, config.environmentId)
+  await renderPlan(batches, config.environmentId, config.quiet)
 
   const serverErrorsWritten = []
 
@@ -344,5 +346,6 @@ interface IRunConfig {
   application: string,
   feature: string,
   persistToSpace: boolean,
+  quiet: boolean,
   yes: boolean
 }

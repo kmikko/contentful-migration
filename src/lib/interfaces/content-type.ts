@@ -40,15 +40,31 @@ interface APIEditorInterfaceSettings {
 
 interface APIEditorInterfaceControl {
   fieldId: string,
-  widgetId: string,
+  widgetId?: string,
+  widgetNamespace?: 'builtin' | 'extension',
   settings?: APIEditorInterfaceSettings
+}
+
+interface APIEditorInterfaceSidebar {
+  widgetId: string,
+  widgetNamespace: 'builtin' | 'extension',
+  disabled?: boolean,
+  settings?: { [key: string]: any }
+}
+
+interface APIEditorIntefaceEditor {
+  widgetId: string,
+  widgetNamespace: 'builtin' | 'extension',
+  settings?: { [key: string]: any }
 }
 
 interface APIEditorInterfaces {
   sys: {
     version: number
-  }
-  controls: APIEditorInterfaceControl[]
+  },
+  controls: APIEditorInterfaceControl[],
+  sidebar?: APIEditorInterfaceSidebar[],
+  editor?: APIEditorIntefaceEditor
 }
 
 export {
@@ -57,5 +73,7 @@ export {
   Field,
   APIEditorInterfaces,
   APIEditorInterfaceControl,
-  APIEditorInterfaceSettings
+  APIEditorInterfaceSettings,
+  APIEditorInterfaceSidebar,
+  APIEditorIntefaceEditor
 }

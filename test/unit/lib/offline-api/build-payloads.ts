@@ -16,7 +16,9 @@ const buildPayloads = async function (runMigration, contentTypes: APIContentType
     sys: {
       version: 1
     },
-    controls: []
+    controls: [],
+    sidebar: undefined,
+    editor: undefined
   })
   const editorInterfacesByContentType: Map<String, EditorInterfaces> = new Map()
 
