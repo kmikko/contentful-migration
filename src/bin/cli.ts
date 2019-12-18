@@ -91,7 +91,7 @@ const createRun = ({ shouldThrow }) => async function runSingle (argv) {
     }
   }
 
-  execMigration(migrationFunction, config, client, terminate)
+  await execMigration(migrationFunction, config, client, terminate)
 }
 
 const createRunBatch = ({ shouldThrow }) => async function runBatch (argv) {
