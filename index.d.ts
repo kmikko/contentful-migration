@@ -1,4 +1,4 @@
-import * as axios from '@contentful/axios'
+import axios from 'axios'
 
 export interface Movement {
   toTheTop(): void
@@ -152,8 +152,8 @@ export interface ContentType {
   /**
    * Changes the control of given field's ID.
    *
-   * @param widgetNamespace The namespace of the widget. Use 'builtin' for standard widgets or 'extension' for UI extensions.
    * @param fieldId The ID of the field.
+   * @param widgetNamespace The namespace of the widget. Use 'builtin' for standard widgets or 'extension' for UI extensions.
    * @param widgetId The new widget ID for the field.
    * @param settings Widget settings
    */

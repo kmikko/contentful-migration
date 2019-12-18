@@ -1,10 +1,10 @@
 import * as path from 'path'
-import * as globby from 'globby'
+import globby from 'globby'
 
 import chalk from 'chalk'
 import * as fs from 'fs'
 import * as inquirer from 'inquirer'
-import * as Listr from 'listr'
+import Listr from 'listr'
 import { createManagementClient } from './lib/contentful-client'
 const { version } = require('../../package.json')
 const {
@@ -49,8 +49,8 @@ const makeTerminatingFunction = ({ shouldThrow }) => (error: Error) => {
 }
 
 const createRun = ({ shouldThrow }) => async function runSingle (argv) {
-  const migrationFunction = loadMigrationFunction(argv.filePath)
   const terminate = makeTerminatingFunction({ shouldThrow })
+  const migrationFunction = loadMigrationFunction(argv.filePath, terminate)
 
   const spaceId = argv.spaceId
   const environmentId = argv.environmentId
@@ -121,7 +121,7 @@ const createRunBatch = ({ shouldThrow }) => async function runBatch (argv) {
   const files = await globby(glob)
   files.sort()
 
-  migrationFunctions.push(...files.map(f => loadMigrationFunction(path.resolve(process.cwd(), f))))
+  migrationFunctions.push(...files.map(f => loadMigrationFunction(path.resolve(process.cwd(), f), terminate)))
 
   const client = createClient(config)
   const history = await client.fetcher.getMigrationHistory()
@@ -327,15 +327,15 @@ export const runMigration = createRun({ shouldThrow: true })
 export default createRun({ shouldThrow: false })
 export const runBatchMigration = createRunBatch({ shouldThrow: true })
 
-function loadMigrationFunction (filePath) {
+function loadMigrationFunction (filePath, terminate) {
   try {
     const ret = require(filePath)
     ret.filePath = filePath
     return ret
   } catch (e) {
-    console.error(chalk`{red.bold The ${filePath} script could not be parsed, as it seems to contain syntax errors.}\n`)
-    console.error(e)
-    process.exit(1)
+    const message = chalk`{red.bold The ${filePath} script could not be parsed, as it seems to contain syntax errors.}\n`
+    console.error(message)
+    terminate(new Error(message))
   }
 }
 

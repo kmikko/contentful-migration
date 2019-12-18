@@ -4,7 +4,7 @@ import APIEntry from '../lib/interfaces/api-entry'
 import { ContentType } from '../lib/entities/content-type'
 import { MigrationHistory } from '../lib/entities/migration-history'
 import * as _ from 'lodash'
-import * as Bluebird from 'bluebird'
+import Bluebird from 'bluebird'
 import APIFetcher from './interfaces/api-fetcher'
 
 export default class Fetcher implements APIFetcher {
