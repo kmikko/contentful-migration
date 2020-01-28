@@ -1,6 +1,6 @@
 {
   "name": "@watermarkchurch/contentful-migration",
-  "version": "1.0.7",
+  "version": "1.0.9",
   "description": "Migration tooling for contentful",
   "author": "Contentful GmbH & Gordon Burgett <gburget@watermark.org>",
   "license": "MIT",
