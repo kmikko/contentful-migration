@@ -121,7 +121,7 @@
 
 ### Pre-requisites
 
-- node.js 8.x
+- Node LTS
 
 ### Installation
 
@@ -209,7 +209,7 @@ Creates a content type with provided `id` and returns a reference to the newly c
 
 - **`name : string`** – Name of the content type.
 - **`description : string`** – Description of the content type.
-- **`displayField : string`** – ID of the field to use as the display field for the content type.
+- **`displayField : string`** – ID of the field to use as the display field for the content type. This is referred to as the "Entry title" in the web application.
 
 #### `editContentType(id[, opts])` : [ContentType](#content-type)
 
@@ -330,6 +330,7 @@ For the given (source) content type, transforms all its entries according to the
 - **`transformEntryForLocale : function (fields, locale): object`** _(required)_ – Transformation function to be applied.
     - `fields` is an object containing each of the `from` fields. Each field will contain their current localized values (i.e. `from == {myField: {'en-US': 'my field value'}}`)
     - `locale` one of the locales in the space being transformed
+
   The return value must be an object with the same keys as specified in the `targetContentType`. Their values will be written to the respective entry fields for the current locale (i.e. `{nameField: 'myNewValue'}`). If it returns `undefined`, this the values for this locale on the entry will be left untouched.
 
 ##### `transformEntriesToType` Example
@@ -363,7 +364,7 @@ For the complete version of this migration, please refer to [this example](./exa
 There may be cases where you want to use Contentful API features that are not supported by the `migration` object. For these cases you have access to the internal configuration of the running migration in a `context` object.
 
 ```javascript
-module.exports = function (migration, { makeRequest, spaceId, accessToken }) {
+module.exports = async function (migration, { makeRequest, spaceId, accessToken }) {
   const contentType = await makeRequest({
     method: 'GET',
     url: `/content_types?sys.id[in]=foo`
@@ -382,7 +383,7 @@ The function used by the migration object to talk to the Contentful Management A
   - `url` : `string` - HTTP endpoint
 
 ```javascript
-module.exports = function (migration, { makeRequest }) {
+module.exports = async function (migration, { makeRequest }) {
   const contentType = await makeRequest({
     method: 'GET',
     url: `/content_types?sys.id[in]=foo`
