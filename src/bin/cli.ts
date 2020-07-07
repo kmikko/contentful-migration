@@ -10,13 +10,12 @@ const { version } = require('../../package.json')
 const {
   SpaceAccessError
 } = require('../lib/errors')
-import createMigrationParser from '../lib/migration-parser'
+import createMigrationParser, { ParseResult } from '../lib/migration-parser'
 import { renderPlan, renderValidationErrors, renderRuntimeErrors } from './lib/render-migration'
 import renderStepsErrors from './lib/steps-errors'
 import writeErrorsToLog from './lib/write-errors-to-log'
 import { RequestBatch } from '../lib/offline-api/index'
 import Fetcher from '../lib/fetcher'
-import { ParseResult } from '../lib/migration-parser'
 import { MigrationHistory } from '../lib/entities/migration-history'
 import { getConfig } from './lib/config'
 import ValidationError from '../lib/interfaces/errors'
@@ -238,15 +237,27 @@ async function execMigration (migrationFunction, config: IRunConfig, { client, m
               requestsDone += 1
               task.title = `Making requests (${requestsDone}/${numRequests})`
               task.output = `${request.method} ${request.url} at V${request.headers['X-Contentful-Version']}`
+
               await makeRequest(request).catch((error) => {
                 serverErrorsWritten.push(writeErrorsToLog(error, errorsFile))
-                const parsed = JSON.parse(error.message)
+                let errorMessage
 
-                const errorMessage = {
-                  status: parsed.statusText,
-                  message: parsed.message,
-                  details: parsed.details,
-                  url: parsed.request.url
+                if (error instanceof TypeError) {
+                  errorMessage = {
+                    message: 'Value does not match the expected type',
+                    details: {
+                      message: error.message.toString()
+                    }
+                  }
+                } else {
+                  const parsed = JSON.parse(error.message)
+
+                  errorMessage = {
+                    status: parsed.statusText,
+                    message: parsed.message,
+                    details: parsed.details,
+                    url: parsed.request.url
+                  }
                 }
 
                 requestErrors.push(new Error(JSON.stringify(errorMessage)))
