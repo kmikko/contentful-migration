@@ -1,5 +1,17 @@
 import * as axios from 'axios'
 
+export interface RunMigrationConfig {
+  filePath: string
+  accessToken?: string
+  spaceId?: string
+  environmentId?: string
+  proxy?: string
+  rawProxy?: boolean
+  yes?: boolean
+}
+
+export function runMigration (config: RunMigrationConfig): Promise<any>
+
 export interface Movement {
   toTheTop(): void
   toTheBottom(): void
@@ -148,6 +160,14 @@ export interface ContentType {
 
   /** Changes the field's ID. */
   changeFieldId (oldId: string, newId: string): void
+
+  /**
+   * 
+   * @param widgetNamespace The namespace of the widget. Use 'builtin' for standard widgets or 'extension' for UI extensions.
+   * @param widgetId The new widget ID for the field.
+   * @param settings Widget settings
+   */
+  configureEntryEditor(widgetNamespace: 'builtin' | 'extension', widgetId: string, settings?: IEditorInterfaceOptions): void
 
   /**
    * Changes the control of given field's ID.
