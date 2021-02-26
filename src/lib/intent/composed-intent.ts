@@ -155,6 +155,14 @@ export default class ComposedIntent implements Intent {
     return false
   }
 
+  isTagDelete (): boolean {
+    return false
+  }
+
+  isEntrySetTags (): boolean {
+    return false
+  }
+
   toActions () {
     return flatten(this.intents.map((intent) => intent.toActions()))
   }
@@ -178,7 +186,7 @@ export default class ComposedIntent implements Intent {
 
     const mainHeading = firstIntent.toPlanMessage().heading
 
-    const contentTypeUpdates = this.intents.filter((intent) => intent.isContentTypeUpdate())
+    const contentTypeOrTagUpdates = this.intents.filter((intent) => intent.isContentTypeUpdate() || intent.isTagUpdate())
 
     const fieldCreates = this.intents.filter((intent) => intent.isFieldCreate())
     const editorInterfaceUpdates = this.intents.filter((intent) => intent.isEditorInterfaceUpdate())
@@ -193,7 +201,7 @@ export default class ComposedIntent implements Intent {
     const onlyFieldUpdatesByField = groupBy(onlyFieldUpdates, (intent) => intent.getFieldId())
     const createdFieldUpdatesByField = groupBy(createdFieldUpdates, (intent) => intent.getFieldId())
 
-    const topLevelDetails = flatten(contentTypeUpdates.map((updateIntent) => updateIntent.toPlanMessage().details))
+    const topLevelDetails = flatten(contentTypeOrTagUpdates.map((updateIntent) => updateIntent.toPlanMessage().details))
 
     const sidebarUpdates = flatten(this.intents
       .filter((intent) => intent.isSidebarUpdate())

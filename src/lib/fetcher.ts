@@ -9,20 +9,28 @@ import Bluebird from 'bluebird'
 import APIFetcher from './interfaces/api-fetcher'
 
 export default class Fetcher implements APIFetcher {
-  static perRequestLimit = 100
+  private requestBatchSize: number
   private makeRequest: Function
 
-  constructor (makeRequest: Function) {
+  constructor (makeRequest: Function, requestBatchSize: number = 100) {
     this.makeRequest = makeRequest
+    this.requestBatchSize = requestBatchSize
   }
 
   async getEntriesInIntents (intentList: IntentList): Promise<APIEntry[]> {
     const loadAllEntries = intentList.getIntents().some((intent) => intent.requiresAllEntries())
 
     const ids: string[] = _.uniq(
-      intentList.getIntents()
-      .filter((intent) => intent.isContentTransform() || intent.isEntryDerive() || intent.isEntryTransformToType())
-      .map((intent) => intent.getContentTypeId())
+      intentList
+        .getIntents()
+        .filter(
+          intent =>
+            intent.isContentTransform() ||
+            intent.isEntryDerive() ||
+            intent.isEntryTransformToType() ||
+            intent.isEntrySetTags()
+        )
+        .map(intent => intent.getContentTypeId())
     )
 
     if (!loadAllEntries && ids.length === 0) {
@@ -154,7 +162,7 @@ export default class Fetcher implements APIFetcher {
 
   async getTagsForEnvironment (intentList: IntentList): Promise<APITag[]> {
     // Don't fetch tags if migration does not use any.
-    if (!(intentList.getIntents().some((intent) => intent.isTagIntent()))) {
+    if (!(intentList.getIntents().some((intent) => intent.isTagIntent() || intent.isEntrySetTags()))) {
       return []
     }
 
@@ -194,7 +202,7 @@ export default class Fetcher implements APIFetcher {
 
     while (true) {
       const paramsWithSkip = {
-        limit: Fetcher.perRequestLimit,
+        limit: this.requestBatchSize,
         order: 'sys.createdAt',
         ...params,
         skip: skip.toString(10)

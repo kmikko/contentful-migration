@@ -71,6 +71,13 @@ export default yargs
     describe: 'Persists the fact that this migration ran in a History content-type in the Contentful space',
     default: false
   })
+  .option('request-batch-size', {
+    alias: 'l',
+    boolean: false,
+    describe: 'Batch size per request',
+    type: 'number',
+    default: 100
+  })
   .demandOption(['space-id'], 'Please provide a space ID')
   .help('h')
   .alias('h', 'help')

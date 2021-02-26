@@ -137,7 +137,19 @@ const errorCreators: ErrorCreators = {
       DERIVE_BEFORE_CONTENT_TYPE_CREATE: (id) => {
         return `You cannot derive entries for content type "${id}" because it has not yet been created.`
       }
+    },
+    setTagsForEntries: {
+      CONTENT_TYPE_DOES_NOT_EXIST: (id) => {
+        return `You cannot update tags on entries for content type "${id}" because it does not exist.`
+      },
+      SET_TAGS_AFTER_CONTENT_TYPE_DELETE: (id) => {
+        return `You cannot update tags on entries for content type "${id}" because it was deleted.`
+      },
+      SET_TAGS_BEFORE_CONTENT_TYPE_CREATE: (id) => {
+        return `You cannot update tags on entries for content type "${id}" because it has not yet been created.`
+      }
     }
+
   },
   entry: {
     transformation: {
@@ -170,6 +182,28 @@ const errorCreators: ErrorCreators = {
       },
       TAG_ALREADY_EXISTS: (id) => {
         return `Tag with id "${id}" already exists.`
+      }
+    },
+    update: {
+      TAG_NOT_YET_CREATED: (id) => {
+        return `You cannot set a property on tag "${id}" because it has not yet been created.`
+      },
+      TAG_DOES_NOT_EXIST: (id) => {
+        return `You cannot set a property on tag "${id}" because it does not exist.`
+      },
+      TAG_NAME_ALREADY_EXISTS: (name) => {
+        return `Tag with name "${name}" already exists.`
+      }
+    },
+    delete: {
+      TAG_DOES_NOT_EXIST: (id) => {
+        return `You cannot delete tag "${id}" because it does not exist.`
+      },
+      TAG_ALREADY_DELETED: (id) => {
+        return `Tag with id "${id}" cannot be deleted more than once.`
+      },
+      EDIT_AFTER_DELETE: (id) => {
+        return `Tag with id "${id}" cannot be edited because it was deleted before.`
       }
     }
   },

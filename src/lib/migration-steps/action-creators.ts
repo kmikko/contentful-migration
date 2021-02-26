@@ -1,6 +1,7 @@
 import * as Intents from '../intent/index'
 import ContentTransform from '../interfaces/content-transform'
 import EntryDerive from '../interfaces/entry-derive'
+import EntrySetTags from '../interfaces/entry-set-tags'
 import TransformEntryToType from '../interfaces/entry-transform-to-type'
 
 const actionCreators = {
@@ -240,6 +241,20 @@ const actionCreators = {
       payload: {
         contentTypeId: id
       }
+    }),
+    setTagsForEntries: (id, instanceId, entryTransformationForTags: EntrySetTags, callsite): Intents.EntrySetTags => new Intents.EntrySetTags({
+      type: 'contentType/setTagsForEntries',
+      meta: {
+        contentTypeInstanceId: `contentType/${id}/${instanceId}`,
+        callsite: {
+          file: callsite.getFileName(),
+          line: callsite.getLineNumber()
+        }
+      },
+      payload: {
+        entryTransformationForTags,
+        contentTypeId: id
+      }
     })
   },
   field: {
@@ -356,6 +371,19 @@ const actionCreators = {
             [property]: value
           }
         }
+      })
+    },
+    delete: (id, instanceId, callsite): Intents.TagDelete => {
+      return new Intents.TagDelete({
+        type: 'tag/delete',
+        meta: {
+          tagInstanceId: `tag/${id}/${instanceId}`,
+          callsite: {
+            file: callsite.getFileName(),
+            line: callsite.getLineNumber()
+          }
+        },
+        payload: { tagId: id }
       })
     }
   }

@@ -100,6 +100,13 @@ function deleteDevEnvironment (spaceId, environmentId) {
   });
 }
 
+function getDevTag (spaceId, environmentId, id) {
+  return makeRequest(spaceId, environmentId, {
+    method: 'GET',
+    url: `/tags/${id}`
+  });
+}
+
 module.exports = {
   makeRequest,
   createDevEnvironment,
@@ -107,5 +114,6 @@ module.exports = {
   getDevContentType,
   getEntries,
   createEntry,
-  getDevEditorInterface
+  getDevEditorInterface,
+  getDevTag
 };
