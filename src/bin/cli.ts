@@ -46,6 +46,21 @@ const makeTerminatingFunction = ({ shouldThrow }) => (error: Error) => {
     process.exit(1)
   }
 }
+export const createMakeRequest = (client, { spaceId, environmentId }) => {
+  return function (requestConfig) {
+    let requestUrl = [spaceId, 'environments', environmentId].join('/')
+    if (requestConfig.url) {
+      const normalizedConfigUrl = requestConfig.url.replace(/(^\/)+/, '')
+      requestUrl = `${requestUrl}/${normalizedConfigUrl}`
+    }
+
+    const config = Object.assign({}, requestConfig, {
+      url: requestUrl
+    })
+
+    return client.rawRequest(config)
+  }
+}
 
 const createRun = ({ shouldThrow }) => async function runSingle (argv) {
   const terminate = makeTerminatingFunction({ shouldThrow })
@@ -156,12 +171,7 @@ function createClient (config: IRunConfig) {
   const clientConfig = Object.assign({}, config)
 
   const client = createManagementClient(clientConfig)
-  const makeRequest = function (requestConfig) {
-    const cfg = Object.assign({}, requestConfig, {
-      url: [clientConfig.spaceId, 'environments', clientConfig.environmentId, requestConfig.url].join('/')
-    })
-    return client.rawRequest(cfg)
-  }
+  const makeRequest = createMakeRequest(client, { spaceId: clientConfig.spaceId, environmentId: clientConfig.environmentId })
 
   const fetcher = new Fetcher(makeRequest)
   return { client, makeRequest, fetcher }
