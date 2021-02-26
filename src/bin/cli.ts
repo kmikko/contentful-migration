@@ -1,5 +1,6 @@
 import * as path from 'path'
 import globby from 'globby'
+import { AxiosRequestConfig } from 'axios'
 
 import chalk from 'chalk'
 import * as fs from 'fs'
@@ -19,6 +20,8 @@ import Fetcher from '../lib/fetcher'
 import { MigrationHistory } from '../lib/entities/migration-history'
 import { getConfig } from './lib/config'
 import ValidationError from '../lib/interfaces/errors'
+import { PlainClientAPI } from 'contentful-management'
+import trim from 'lodash/trim'
 
 class ManyError extends Error {
   public errors: (Error | ValidationError)[]
@@ -46,19 +49,23 @@ const makeTerminatingFunction = ({ shouldThrow }) => (error: Error) => {
     process.exit(1)
   }
 }
-export const createMakeRequest = (client, { spaceId, environmentId }) => {
-  return function (requestConfig) {
-    let requestUrl = [spaceId, 'environments', environmentId].join('/')
-    if (requestConfig.url) {
-      const normalizedConfigUrl = requestConfig.url.replace(/(^\/)+/, '')
-      requestUrl = `${requestUrl}/${normalizedConfigUrl}`
-    }
 
-    const config = Object.assign({}, requestConfig, {
-      url: requestUrl
-    })
+export const createMakeRequest = (client: PlainClientAPI, { spaceId, environmentId }) => {
+  const makeBaseUrl = (url: string) => {
+    const parts = [
+      'spaces', spaceId,
+      'environments', environmentId,
+      trim(url, '/')
+    ]
 
-    return client.rawRequest(config)
+    return parts.filter(x => x !== '').join('/')
+  }
+
+  return function makeRequest (requestConfig: AxiosRequestConfig) {
+    const { url, ...config } = requestConfig
+    const fullUrl = makeBaseUrl(url)
+
+    return client.raw.http(fullUrl, config)
   }
 }
 
@@ -171,7 +178,10 @@ function createClient (config: IRunConfig) {
   const clientConfig = Object.assign({}, config)
 
   const client = createManagementClient(clientConfig)
-  const makeRequest = createMakeRequest(client, { spaceId: clientConfig.spaceId, environmentId: clientConfig.environmentId })
+  const makeRequest = createMakeRequest(client, {
+    spaceId: clientConfig.spaceId,
+    environmentId: clientConfig.environmentId
+  })
 
   const fetcher = new Fetcher(makeRequest)
   return { client, makeRequest, fetcher }
