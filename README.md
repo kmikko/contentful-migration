@@ -1,3 +1,36 @@
+# :warning: This is a fork of https://github.com/contentful/contentful-migration :warning:
+
+This fork is maintained by [Watermark Community Church](https://www.watermark.org)
+
+## Why fork?
+
+At Watermark Church, we have found that the best workflow for managing content type changes in Contentful is to check migration scripts into the repository.  This allows us to have them version controlled and only run when the corresponding code is promoted to production.
+Since we have a directory full of migration scripts, we need a way to control which of them get run.  We would like for this to be done as part of our deployment step, similarly to how Rails performs ActiveRecord migrations.
+To accomplish this we store a history of migrations in our Contentful space, using a content type named "Migration History".
+
+The purpose of this fork is to scan the Migration History in the target contentful space and only apply migrations that do not exist yet in the migration history.  This allows us to run the migration tool on every deployment, and it will execute only the necessary migrations.
+
+We attempted to submit this fork as a [pull request back to Contentful](https://github.com/contentful/contentful-migration/pull/66), but they opted to find a different solution to the problem.  We continue to maintain this fork because it seems they have not yet landed on a standardized built-in solution and are leaving it up to each client to pursue their own workflow.
+
+## Usage with Heroku
+In your `Procfile`, add this line:
+```
+release: bin/release
+```
+
+In your `bin/release` shell script, add:
+```sh
+node_modules/.bin/contentful-migration \
+    -s $CONTENTFUL_SPACE_ID --environment-id ${CONTENTFUL_ENVIRONMENT:-master} -a $CONTENTFUL_MANAGEMENT_TOKEN \
+    -y --persist-to-space batch db/migrate
+```
+
+Now simply create Contentful migration scripts and check them into your `db/migrate` directory.  They will be run once on deployment to Heroku.
+
+## Original Contentful readme below
+
+
+
 ![header](./.github/header.png)
 <p align="center">
   <a href="https://www.contentful.com/slack/">
