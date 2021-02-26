@@ -187,7 +187,7 @@ function createClient (config: IRunConfig) {
   return { client, makeRequest, fetcher }
 }
 
-async function execMigration (migrationFunction, config: IRunConfig, { client, makeRequest }, terminate: TerminatingFunction) {
+async function execMigration (migrationFunction, config: IRunConfig, { client, makeRequest }: { client: PlainClientAPI, makeRequest: Function }, terminate: TerminatingFunction) {
 
   const migrationName = path.basename(migrationFunction.filePath)
   const errorsFile = path.join(
@@ -293,19 +293,21 @@ async function execMigration (migrationFunction, config: IRunConfig, { client, m
     }
   })
 
-  const space = await client.getSpace(config.spaceId)
-  const environment = await space.getEnvironment(config.environmentId)
+  const params = { spaceId: config.spaceId!, environmentId: config.environmentId || 'master' }
 
-  let thisMigrationHistory
+  let thisMigrationHistory: MigrationHistory
   if (config.persistToSpace) {
     tasks.splice(0, 0, {
       title: `Insert Migration "${migrationName}" into History`,
       task: async () => {
-        await MigrationHistory.getOrCreateContentType(environment)
+        await MigrationHistory.getOrCreateContentType(client, params)
 
         thisMigrationHistory = new MigrationHistory(migrationName)
         thisMigrationHistory.detail = batches
-        const resp = await environment.createEntry('migrationHistory', thisMigrationHistory.update({}))
+        const resp = await client.entry.create({
+          ...params,
+          contentTypeId: 'migrationHistory'
+        }, thisMigrationHistory.update({ fields: {} }))
         thisMigrationHistory.id = resp.sys.id
       }
     })
@@ -314,10 +316,19 @@ async function execMigration (migrationFunction, config: IRunConfig, { client, m
       title: 'Mark migration as completed',
       task: async () => {
         thisMigrationHistory.completed = Date.now()
-        let entry = await environment.getEntry(thisMigrationHistory.id)
-        thisMigrationHistory.update(entry)
-        entry = await entry.update()
-        entry = await entry.publish()
+        let entry = await client.entry.get({
+          ...params,
+          entryId: thisMigrationHistory.id
+        })
+        entry = thisMigrationHistory.update(entry)
+        entry = await client.entry.update({
+          ...params,
+          entryId: entry.sys.id,
+        }, entry)
+        entry = await client.entry.publish({
+          ...params,
+          entryId: entry.sys.id,
+        }, entry)
       }
     })
   }

@@ -1,3 +1,5 @@
+import { PlainClientAPI } from "contentful-management"
+import { ContentTypeProps } from "contentful-management/dist/typings/export-types"
 
 export class MigrationHistory {
   public id: string
@@ -26,8 +28,29 @@ export class MigrationHistory {
 
   }
 
-  static structure () {
+  static structure (params: { spaceId: string, environmentId: string}): ContentTypeProps {
     return {
+      "sys": {
+        "space": {
+          "sys": {
+            "type": "Link",
+            "linkType": "Space",
+            "id": params.spaceId
+          }
+        },
+        "id": "migrationHistory",
+        "type": "ContentType",
+        "environment": {
+          "sys": {
+            "id": params.environmentId,
+            "type": "Link",
+            "linkType": "Environment"
+          }
+        },
+        version: 1,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      },
       displayField: 'migrationName',
       name: 'Migration History',
       description: 'System Type - Do Not Modify',
@@ -35,30 +58,52 @@ export class MigrationHistory {
       [ { id: 'migrationName',
         name: 'Migration Name',
         type: 'Symbol',
+        localized: false,
         required: true },
       { id: 'started',
         name: 'Started',
+        localized: false,
+        required: false,
         type: 'Date' },
       { id: 'completed',
         name: 'Completed',
+        localized: false,
+        required: false,
         type: 'Date' },
       { id: 'detail',
         name: 'Detail',
+        localized: false,
+        required: false,
         type: 'Object' } ]
     }
   }
 
-  static async getOrCreateContentType (space) {
+  static async getOrCreateContentType (client: PlainClientAPI, params: { spaceId: string, environmentId: string}) {
     try {
-      return await space.getContentType('migrationHistory')
+      return await client.contentType.get({
+        ...params,
+        contentTypeId: 'migrationHistory'
+      })
     } catch (err) {
       // table doesnt exist, create it and wait for it to propagate in the system
-      const type = await space.createContentTypeWithId('migrationHistory', MigrationHistory.structure())
-      await type.publish()
+      const data = MigrationHistory.structure(params)
+      const type = await client.contentType.update({
+          ...params,
+          contentTypeId: 'migrationHistory'
+        },
+        data
+      )
+      await client.contentType.publish({
+          ...params,
+          contentTypeId: type.sys.id
+        },
+        data
+      )
+      return type
     }
   }
 
-  update (entry) {
+  update<TEntry extends { fields?: Record<string, { 'en-US': any }> }> (entry: TEntry) {
     if (!entry.fields) {
       entry.fields = {}
     }
