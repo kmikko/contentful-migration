@@ -65,6 +65,15 @@ describe('Migration parser', function () {
             items: [{ code: 'en-US' }]
           }
         }
+
+        if (config.url === `/tags?limit=100&order=sys.createdAt&skip=0`) {
+          return {
+            total: 0,
+            skip: 0,
+            limit: 0,
+            items: []
+          }
+        }
       }
       const migrationParser = createMigrationParser(fakeMakeRequest, {})
 
@@ -102,9 +111,8 @@ describe('Migration parser', function () {
 
       expect(result.length).to.eql(2)
 
-      expect(result[0].requests.length).to.eql(2)
+      expect(result[0].requests.length).to.eql(1)
       expect(result[0].requests[0].url).to.eql('/entries/456')
-      expect(result[0].requests[1].url).to.eql('/entries/456/published')
       expect(result[0].runtimeErrors.length).to.eql(1)
       expect(result[0].runtimeErrors).to.eql([fooError])
 
@@ -161,6 +169,15 @@ describe('Migration parser', function () {
             skip: 0,
             limit: 0,
             items: [{ code: 'en-US' }]
+          }
+        }
+
+        if (config.url === `/tags?limit=100&order=sys.createdAt&skip=0`) {
+          return {
+            total: 0,
+            skip: 0,
+            limit: 0,
+            items: []
           }
         }
       }
