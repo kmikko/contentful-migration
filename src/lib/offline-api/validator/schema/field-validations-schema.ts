@@ -18,6 +18,7 @@ const rangeForDate = () => Joi.object({
 })
 
 const linkContentType = validation('linkContentType', Joi.array().items(Joi.string()))
+const relationshipType = validation('relationshipType', Joi.array().items(Joi.string()))
 const inValidation = validation('in', Joi.array())
 const linkMimetypeGroup = validation('linkMimetypeGroup', Joi.array().items(Joi.string()))
 const size = validation('size', range('number'))
@@ -75,6 +76,7 @@ const enabledNodeTypes = validation('enabledNodeTypes', Joi.array().items(Joi.st
 
 const fieldValidations = Joi.alternatives().try(
   linkContentType,
+  relationshipType,
   inValidation,
   linkMimetypeGroup,
   size,
